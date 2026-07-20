@@ -35,7 +35,10 @@ _security = TransportSecuritySettings(
     allowed_origins=[o.strip() for o in os.getenv("TF_ALLOWED_ORIGINS", "*").split(",")],
 )
 
-mcp = FastMCP("traceflow-compress", transport_security=_security)
+# stateless_http=True: each request is self-contained (no persistent session /
+# background task group), which is required to run on serverless (Vercel).
+mcp = FastMCP("traceflow-compress", transport_security=_security,
+              stateless_http=True, json_response=True)
 
 
 @mcp.tool()
