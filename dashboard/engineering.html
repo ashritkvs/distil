@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TraceFlow Compress — Engineering</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
+  body { background: #fff; color: #000; font-family: "Inter", sans-serif; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 48px; }
+  .header { padding: 24px 0; border-bottom: 1px solid #000; display: flex; justify-content: space-between; align-items: flex-end; }
+  .title { font-size: 13px; color: #444; text-transform: uppercase; letter-spacing: 0.1em; }
+  .sub { font-size: 12px; color: #444; margin-top: 4px; }
+  a { color: #000; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 24px; }
+  .cell { border: 1px solid #000; margin: -1px 0 0 -1px; padding: 14px 14px; }
+  .label { font-size: 10px; color: #444; letter-spacing: 0.08em; text-transform: uppercase; }
+  .value { font-size: 22px; font-weight: 500; margin-top: 6px; font-family: "JetBrains Mono", monospace; }
+  .chart { margin-top: 28px; }
+  .chart h3 { font-size: 11px; color: #444; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; margin-bottom: 8px; }
+  svg { width: 100%; height: 160px; border: 1px solid #ccc; display: block; }
+  .axis { font: 9px "JetBrains Mono", monospace; fill: #888; }
+  .empty { color: #888; font-size: 12px; padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div>
+      <div class="title">TraceFlow Compress — Engineering</div>
+      <div class="sub">Distributions over recent compressions</div>
+    </div>
+    <a href="/">← overview</a>
+  </div>
+
+  <div class="strip" id="strip"></div>
+
+  <div class="chart"><h3>Reduction % distribution</h3><div id="c_red"></div></div>
+  <div class="chart"><h3>Original prompt size (tokens)</h3><div id="c_tok"></div></div>
+  <div class="chart"><h3>Latency (ms) — recent runs</h3><div id="c_lat"></div></div>
+  <div class="chart"><h3>Mode breakdown</h3><div id="c_mode"></div></div>
+</div>
+
+<script>
+  const NS = "http://www.w3.org/2000/svg";
+  function el(name, attrs, text) {
+    const e = document.createElementNS(NS, name);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function svg() { const s = el("svg", { viewBox: "0 0 600 160", preserveAspectRatio: "none" }); return s; }
+
+  function histogram(mount, values, bins, fmt) {
+    mount.innerHTML = "";
+    if (!values.length) { mount.innerHTML = '<div class="empty">No data yet.</div>'; return; }
+    const min = Math.min(...values), max = Math.max(...values) || 1;
+    const span = (max - min) || 1;
+    const counts = new Array(bins).fill(0);
+    values.forEach(v => { let i = Math.floor((v - min) / span * bins); if (i >= bins) i = bins - 1; counts[i]++; });
+    const cmax = Math.max(...counts) || 1;
+    const s = svg(); const W = 600, H = 160, pad = 18, bw = (W - 2 * pad) / bins;
+    counts.forEach((c, i) => {
+      const h = (H - 2 * pad) * (c / cmax);
+      s.appendChild(el("rect", { x: pad + i * bw + 1, y: H - pad - h, width: bw - 2, height: h, fill: "#000" }));
+    });
+    s.appendChild(el("text", { x: pad, y: H - 4, class: "axis" }, fmt(min)));
+    s.appendChild(el("text", { x: W - pad, y: H - 4, class: "axis", "text-anchor": "end" }, fmt(max)));
+    mount.appendChild(s);
+  }
+
+  function bars(mount, values, fmt) {
+    mount.innerHTML = "";
+    if (!values.length) { mount.innerHTML = '<div class="empty">No data yet.</div>'; return; }
+    const vals = values.slice(0, 40).reverse();
+    const vmax = Math.max(...vals) || 1;
+    const s = svg(); const W = 600, H = 160, pad = 18, bw = (W - 2 * pad) / vals.length;
+    vals.forEach((v, i) => {
+      const h = (H - 2 * pad) * (v / vmax);
+      s.appendChild(el("rect", { x: pad + i * bw + 1, y: H - pad - h, width: Math.max(bw - 2, 1), height: h, fill: "#000" }));
+    });
+    s.appendChild(el("text", { x: W - pad, y: 14, class: "axis", "text-anchor": "end" }, "max " + fmt(vmax)));
+    mount.appendChild(s);
+  }
+
+  function modeBreakdown(mount, records) {
+    mount.innerHTML = "";
+    if (!records.length) { mount.innerHTML = '<div class="empty">No data yet.</div>'; return; }
+    const counts = {};
+    records.forEach(r => { counts[r.mode] = (counts[r.mode] || 0) + 1; });
+    const keys = Object.keys(counts); const total = records.length;
+    const s = svg(); const W = 600, H = 160, pad = 20; let x = pad;
+    keys.forEach((k, i) => {
+      const w = (W - 2 * pad) * (counts[k] / total);
+      const shade = ["#000", "#444", "#888", "#ccc"][i % 4];
+      s.appendChild(el("rect", { x, y: 50, width: w, height: 40, fill: shade }));
+      s.appendChild(el("text", { x: x + 4, y: 110, class: "axis" }, `${k} ${counts[k]}`));
+      x += w;
+    });
+    mount.appendChild(s);
+  }
+
+  async function load() {
+    const [m, recs] = await Promise.all([
+      fetch("/metrics").then(r => r.json()),
+      fetch("/records").then(r => r.json()),
+    ]);
+    const strip = document.getElementById("strip");
+    const cells = [
+      ["Throughput", (m.throughput_tokens_per_sec ?? 0) + " tok/s"],
+      ["Avg Latency", (m.avg_latency_ms ?? 0) + " ms"],
+      ["Error Rate", (m.error_rate_pct ?? 0) + "%"],
+      ["Requests", (m.total_requests ?? 0)],
+    ];
+    strip.innerHTML = cells.map(c => `<div class="cell"><div class="label">${c[0]}</div><div class="value">${c[1]}</div></div>`).join("");
+
+    histogram(document.getElementById("c_red"), recs.map(r => r.reduction_pct), 12, v => v.toFixed(0) + "%");
+    histogram(document.getElementById("c_tok"), recs.map(r => r.original_tokens), 12, v => Math.round(v));
+    bars(document.getElementById("c_lat"), recs.map(r => r.latency_ms), v => v.toFixed(1));
+    modeBreakdown(document.getElementById("c_mode"), recs);
+  }
+  load();
+</script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TraceFlow Compress — Metrics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono&display=swap" rel="stylesheet" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
+  body { background: #fff; color: #000; font-family: "Inter", sans-serif; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 48px; }
+  .header { padding: 24px 0; border-bottom: 1px solid #000; }
+  .title { font-size: 13px; color: #444; text-transform: uppercase; letter-spacing: 0.1em; }
+  .sub { font-size: 12px; color: #444; margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 28px; }
+  .cell { border: 1px solid #000; margin: -1px 0 0 -1px; padding: 18px 16px; }
+  .label { font-size: 10px; color: #444; letter-spacing: 0.08em; text-transform: uppercase; }
+  .value { font-size: 30px; font-weight: 500; margin-top: 8px; font-family: "JetBrains Mono", monospace; }
+  .value small { font-size: 13px; color: #444; }
+  .note { margin-top: 24px; font-size: 11px; color: #888; line-height: 1.6; }
+  .est { font-size: 9px; color: #888; letter-spacing: 0.06em; }
+  button { margin-top: 20px; height: 40px; padding: 0 18px; background: #000; color: #fff;
+           border: none; font: 500 12px "Inter"; letter-spacing: 0.05em; cursor: pointer; }
+  button:hover { background: #222; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="title">TraceFlow Compress</div>
+    <div class="sub">Token-aware prompt compression — live metrics</div>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <button id="refresh">REFRESH</button>
+  <a href="/engineering" style="margin-left:12px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#000;">Engineering view →</a>
+
+  <div class="note">
+    <span class="est">MEASURED</span>: request count, tokens saved, average reduction.
+    <span class="est">ESTIMATED</span>: cost, carbon, and GPU-time savings — modeled
+    from tokens saved (energy/carbon factors + <code>2×params×tokens</code> compute
+    model). Closed-model params are assumed. Nothing here is a hardware measurement.
+  </div>
+</div>
+
+<script>
+  const CELLS = [
+    { key: "total_requests",       label: "Requests",           fmt: v => v },
+    { key: "total_tokens_saved",   label: "Tokens Saved",       fmt: v => v },
+    { key: "avg_reduction_pct",    label: "Avg Reduction",      fmt: v => v + "%" },
+    { key: "total_cost_saved_usd", label: "Cost Saved (est)",   fmt: v => "$" + Number(v).toFixed(4) },
+    { key: "total_carbon_saved_g", label: "CO₂ Saved (est)",    fmt: v => Number(v).toFixed(2) + "<small> g</small>" },
+    { key: "total_gpu_ms_saved",   label: "GPU-ms Saved (est)", fmt: v => Number(v).toFixed(1) + "<small> ms</small>" },
+  ];
+  async function load() {
+    const grid = document.getElementById("grid");
+    try {
+      const r = await fetch("/metrics");
+      const d = await r.json();
+      let html = CELLS.map(c =>
+        `<div class="cell"><div class="label">${c.label}</div>
+         <div class="value">${c.fmt(d[c.key] ?? 0)}</div></div>`).join("");
+      const cache = d.cache || {};
+      html += `<div class="cell"><div class="label">Cache Hit Rate</div>
+        <div class="value">${(cache.hit_rate_pct ?? 0)}%</div></div>`;
+      html += `<div class="cell"><div class="label">Cache Hits</div>
+        <div class="value">${(cache.hits_exact ?? 0) + (cache.hits_semantic ?? 0)}
+        <small> / ${cache.size ?? 0} cached</small></div></div>`;
+      grid.innerHTML = html;
+    } catch (e) {
+      grid.innerHTML = `<div class="cell"><div class="label">Error</div>
+        <div class="value" style="font-size:14px">metrics unavailable</div></div>`;
+    }
+  }
+  document.getElementById("refresh").addEventListener("click", load);
+  load();
+</script>
+</body>
+</html>
