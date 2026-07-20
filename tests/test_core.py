@@ -256,6 +256,41 @@ def test_pipeline_blocks_and_allows():
     assert blocked["compressed_text"] is None
 
 
+def test_package_policy():
+    from core.policy import check_packages
+    p = check_packages("please import pycrypto and pip install requests")
+    assert "pycrypto" in p["detected_packages"]
+    assert "pycrypto" in p["violations"]      # denied by default
+    assert "requests" not in p["violations"]  # allowed
+
+
+def test_governance_blocks_denied_package():
+    from core.governance import govern
+    g = govern("Write code that will import pycrypto to encrypt data.")
+    assert g["verdict"] == "block"
+    assert any("policy" in r for r in g["reasons"])
+
+
+def test_budget(tmp_path, monkeypatch):
+    from core.store import MetricsStore
+    import core.budget as budget_mod
+    monkeypatch.setenv("TF_METRICS_PATH", str(tmp_path / "b.json"))
+    monkeypatch.setenv("TF_TOKEN_BUDGET", "1000")
+    s = MetricsStore()
+    monkeypatch.setattr(budget_mod, "store", s)
+    s.record({"original_tokens": 100, "compressed_tokens": 50, "tokens_saved": 50})
+    b = budget_mod.get_budget()
+    assert b["budget_tokens"] == 1000
+    assert b["tokens_used"] == 100
+    assert b["tokens_available"] == 900
+
+
+def test_providers_listed():
+    from core.providers import list_providers
+    ids = [p["id"] for p in list_providers()["providers"]]
+    assert "openai" in ids and "anthropic" in ids
+
+
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
 def test_llm_mode_runs():
     r = compress(VERBOSE, target_ratio=0.5, quality=True, use_cache=False)

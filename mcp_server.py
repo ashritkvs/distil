@@ -18,10 +18,13 @@ from core import compress as _compress
 from core import estimates
 from core.aiops import detect_anomalies as _detect_anomalies
 from core.cache import cache
+from core.budget import get_budget as _get_budget
 from core.classify import classify as _classify
 from core.forecast import forecast as _forecast
 from core.governance import govern as _govern
 from core.pipeline import process as _process
+from core.policy import check_packages as _check_packages
+from core.providers import list_providers as _list_providers
 from core.routing import route as _route
 from core.store import store
 from core.verify import compress_safe as _compress_safe
@@ -145,6 +148,26 @@ def classify_prompt(text: str) -> dict:
 def get_violations(n: int = 50) -> list[dict]:
     """Return recent governance violations (warn/block verdicts)."""
     return store.violations(n)
+
+
+@mcp.tool()
+def get_budget() -> dict:
+    """Token budget status: used, available, utilization, and how much the
+    budget is stretched by compression (configured via TF_TOKEN_BUDGET)."""
+    return _get_budget()
+
+
+@mcp.tool()
+def check_policy(text: str) -> dict:
+    """Check package references in a prompt/code against the allow/deny policy."""
+    return _check_packages(text)
+
+
+@mcp.tool()
+def list_providers() -> dict:
+    """List LLM providers this gateway can integrate with and whether each is
+    currently configured."""
+    return _list_providers()
 
 
 @mcp.tool()

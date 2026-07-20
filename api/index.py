@@ -43,8 +43,10 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
 
 
 async def metrics_endpoint(request):
+    from core.budget import get_budget
     summary = store.summary()
     summary["cache"] = cache.stats()
+    summary["budget"] = get_budget()
     return JSONResponse(summary)
 
 
