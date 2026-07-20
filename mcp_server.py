@@ -20,6 +20,7 @@ from core.aiops import detect_anomalies as _detect_anomalies
 from core.cache import cache
 from core.budget import get_budget as _get_budget
 from core.classify import classify as _classify
+from core.codescan import scan_code as _scan_code
 from core.forecast import forecast as _forecast
 from core.governance import govern as _govern
 from core.pipeline import process as _process
@@ -168,6 +169,13 @@ def list_providers() -> dict:
     """List LLM providers this gateway can integrate with and whether each is
     currently configured."""
     return _list_providers()
+
+
+@mcp.tool()
+def scan_code(text: str) -> dict:
+    """Scan code in a prompt/response for dangerous patterns (eval, shell=True,
+    pickle, SQL injection, hardcoded secrets, weak hashing, etc.)."""
+    return _scan_code(text)
 
 
 @mcp.tool()

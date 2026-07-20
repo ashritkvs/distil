@@ -291,6 +291,29 @@ def test_providers_listed():
     assert "openai" in ids and "anthropic" in ids
 
 
+def test_code_scan():
+    from core.codescan import scan_code
+    assert scan_code("Explain how photosynthesis works.")["has_code"] is False
+    risky = scan_code("def run(cmd):\n    import os\n    os.system(cmd)  # danger")
+    assert risky["has_code"] is True
+    assert risky["risk_level"] == "high"
+    assert any(f["type"] == "os_system" for f in risky["findings"])
+
+
+def test_governance_flags_risky_code():
+    from core.governance import govern
+    g = govern("Here is code: result = eval(user_input)  # run it")
+    assert g["verdict"] == "block"  # eval => high risk
+
+
+def test_manifest():
+    from core.manifest import get_manifest
+    m = get_manifest()
+    assert m["name"] == "traceflow-compress"
+    assert "prompt-compression" in m["capabilities"]
+    assert m["mcp_endpoint"] == "/mcp"
+
+
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
 def test_llm_mode_runs():
     r = compress(VERBOSE, target_ratio=0.5, quality=True, use_cache=False)

@@ -58,6 +58,11 @@ async def violations_endpoint(request):
     return JSONResponse(store.violations(50))
 
 
+async def manifest_endpoint(request):
+    from core.manifest import get_manifest
+    return JSONResponse(get_manifest())
+
+
 async def process_endpoint(request):
     """Unified gateway: govern + compress a prompt."""
     try:
@@ -150,6 +155,7 @@ app = mcp.streamable_http_app()
 app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 app.add_route("/records", records_endpoint, methods=["GET"])
 app.add_route("/violations", violations_endpoint, methods=["GET"])
+app.add_route("/manifest", manifest_endpoint, methods=["GET"])
 app.add_route("/compress", compress_endpoint, methods=["POST"])
 app.add_route("/process", process_endpoint, methods=["POST"])
 app.add_route("/engineering", engineering, methods=["GET"])
