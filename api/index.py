@@ -13,6 +13,7 @@ import os
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import HTMLResponse, JSONResponse
 
+from core import compress as _compress
 from core.cache import cache
 from core.store import store
 from mcp_server import mcp
@@ -51,6 +52,36 @@ async def records_endpoint(request):
     return JSONResponse(store.all_records()[:100])
 
 
+async def compress_endpoint(request):
+    """Compress a prompt from the dashboard and record it. Public (heuristic
+    is free; quality=true spends the server's OpenAI credits)."""
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid JSON"}, status_code=400)
+    prompt = (data.get("prompt") or "").strip()
+    if len(prompt) < 3:
+        return JSONResponse({"error": "prompt too short (min 3 chars)"},
+                            status_code=422)
+    if len(prompt) > 6000:
+        return JSONResponse({"error": "prompt too long (max 6000 chars)"},
+                            status_code=422)
+    try:
+        result = _compress(
+            prompt,
+            target_ratio=float(data.get("target_ratio", 0.5)),
+            quality=bool(data.get("quality", False)),
+            target_model=data.get("target_model") or "gpt-4o-mini",
+        )
+    except Exception as e:
+        store.record_error(type(e).__name__, prompt)
+        return JSONResponse({"error": str(e)}, status_code=500)
+    d = result.to_dict()
+    if not d.get("cache_hit"):
+        store.record(d)
+    return JSONResponse(d)
+
+
 def _serve(path, fallback):
     try:
         with open(path, encoding="utf-8") as f:
@@ -71,6 +102,7 @@ async def engineering(request):
 app = mcp.streamable_http_app()
 app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 app.add_route("/records", records_endpoint, methods=["GET"])
+app.add_route("/compress", compress_endpoint, methods=["POST"])
 app.add_route("/engineering", engineering, methods=["GET"])
 app.add_route("/", dashboard, methods=["GET"])
 app.add_middleware(APIKeyMiddleware)

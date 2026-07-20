@@ -10,72 +10,177 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; border-radius: 0; }
   body { background: #fff; color: #000; font-family: "Inter", sans-serif; }
-  .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 48px; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 0 16px 56px; }
   .header { padding: 24px 0; border-bottom: 1px solid #000; }
   .title { font-size: 13px; color: #444; text-transform: uppercase; letter-spacing: 0.1em; }
   .sub { font-size: 12px; color: #444; margin-top: 4px; }
-  .grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 28px; }
-  .cell { border: 1px solid #000; margin: -1px 0 0 -1px; padding: 18px 16px; }
-  .label { font-size: 10px; color: #444; letter-spacing: 0.08em; text-transform: uppercase; }
-  .value { font-size: 30px; font-weight: 500; margin-top: 8px; font-family: "JetBrains Mono", monospace; }
-  .value small { font-size: 13px; color: #444; }
-  .note { margin-top: 24px; font-size: 11px; color: #888; line-height: 1.6; }
-  .est { font-size: 9px; color: #888; letter-spacing: 0.06em; }
-  button { margin-top: 20px; height: 40px; padding: 0 18px; background: #000; color: #fff;
-           border: none; font: 500 12px "Inter"; letter-spacing: 0.05em; cursor: pointer; }
-  button:hover { background: #222; }
+  .label { font-size: 11px; color: #444; letter-spacing: 0.08em; text-transform: uppercase; }
+  .section { margin-top: 28px; }
+
+  textarea { display:block; width:100%; height:120px; margin-top:8px; padding:12px;
+    border:1px solid #000; font-family:"JetBrains Mono",monospace; font-size:13px;
+    line-height:1.5; resize:vertical; outline:none; }
+  .controls { display:flex; gap:16px; align-items:center; margin-top:10px; flex-wrap:wrap; font-size:12px; color:#444; }
+  .controls label { display:flex; align-items:center; gap:6px; }
+  select, input[type=range] { font:12px "Inter"; }
+  .ratioval { font-family:"JetBrains Mono",monospace; color:#000; }
+  button { height:44px; padding:0 22px; margin-top:12px; background:#000; color:#fff;
+    border:none; font:500 13px "Inter"; letter-spacing:0.05em; cursor:pointer; }
+  button:hover { background:#222; }
+  button:disabled { opacity:.6; cursor:default; }
+
+  .panels { display:grid; grid-template-columns:1fr 1fr; margin-top:16px; }
+  .panel { border:1px solid #000; margin-left:-1px; }
+  .panel:first-child { margin-left:0; }
+  .panel-head { padding:10px; border-bottom:1px solid #ccc; font-size:10px; color:#444; letter-spacing:.08em; text-transform:uppercase; }
+  .panel-body { padding:12px; min-height:80px; font-family:"JetBrains Mono",monospace; font-size:13px; line-height:1.5; word-break:break-word; white-space:pre-wrap; }
+  .placeholder { color:#888; }
+
+  .chips { display:flex; flex-wrap:wrap; gap:0; margin-top:16px; }
+  .chip { border:1px solid #000; margin:-1px 0 0 -1px; padding:10px 14px; min-width:120px; }
+  .chip .k { font-size:9px; color:#444; letter-spacing:.06em; text-transform:uppercase; }
+  .chip .v { font-size:18px; font-weight:500; font-family:"JetBrains Mono",monospace; margin-top:4px; }
+  .chip.est .k::after { content:" ·est"; color:#aaa; }
+
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); margin-top:8px; }
+  .cell { border:1px solid #000; margin:-1px 0 0 -1px; padding:16px 14px; }
+  .cell .clabel { font-size:10px; color:#444; letter-spacing:.08em; text-transform:uppercase; }
+  .cell .cval { font-size:26px; font-weight:500; margin-top:6px; font-family:"JetBrains Mono",monospace; }
+  .cell .cval small { font-size:12px; color:#444; }
+  .row { margin-top:16px; }
+  a { color:#000; font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+  .note { margin-top:22px; font-size:11px; color:#888; line-height:1.6; }
+  .err { color:#c00; font-size:12px; margin-top:8px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="header">
     <div class="title">TraceFlow Compress</div>
-    <div class="sub">Token-aware prompt compression — live metrics</div>
+    <div class="sub">Token-aware prompt compression — run a prompt, see the metrics</div>
   </div>
 
-  <div class="grid" id="grid"></div>
-  <button id="refresh">REFRESH</button>
-  <a href="/engineering" style="margin-left:12px;font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:#000;">Engineering view →</a>
+  <!-- INPUT -->
+  <div class="section">
+    <div class="label">Input Prompt</div>
+    <textarea id="prompt" placeholder="Paste a verbose prompt here…"></textarea>
+    <div class="controls">
+      <label>Retain
+        <input type="range" id="ratio" min="0.2" max="0.9" step="0.05" value="0.5" />
+        <span class="ratioval" id="ratioval">0.50</span>
+      </label>
+      <label>Target model
+        <select id="model">
+          <option value="gpt-4o-mini">gpt-4o-mini</option>
+          <option value="gpt-4o">gpt-4o</option>
+          <option value="llama-3-8b">llama-3-8b</option>
+          <option value="llama-3-70b">llama-3-70b</option>
+          <option value="auto">auto (route)</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="quality" /> High quality (LLM · uses OpenAI)</label>
+    </div>
+    <button id="run">COMPRESS →</button>
+    <div class="err" id="err"></div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="section" id="resultSection" style="display:none;">
+    <div class="label">Result</div>
+    <div class="panels">
+      <div class="panel"><div class="panel-head">Original</div><div class="panel-body" id="pOrig"></div></div>
+      <div class="panel"><div class="panel-head">Compressed</div><div class="panel-body" id="pComp"></div></div>
+    </div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <!-- AGGREGATE -->
+  <div class="section">
+    <div class="label">Session Totals</div>
+    <div class="grid" id="grid"></div>
+    <div class="row">
+      <button id="refresh" style="height:36px;padding:0 16px;">REFRESH</button>
+      <a href="/engineering" style="margin-left:12px;">Engineering view →</a>
+    </div>
+  </div>
 
   <div class="note">
-    <span class="est">MEASURED</span>: request count, tokens saved, average reduction.
-    <span class="est">ESTIMATED</span>: cost, carbon, and GPU-time savings — modeled
-    from tokens saved (energy/carbon factors + <code>2×params×tokens</code> compute
-    model). Closed-model params are assumed. Nothing here is a hardware measurement.
+    <b>MEASURED</b>: tokens, reduction %, latency, CPU/RAM, throughput.
+    <b>·EST</b> = estimated (cost, carbon, GPU-load) — modeled from tokens saved
+    (energy/carbon factors + <code>2×params×tokens</code>). Closed-model params
+    are assumed. Nothing here is a hardware measurement.
   </div>
 </div>
 
 <script>
-  const CELLS = [
-    { key: "total_requests",       label: "Requests",           fmt: v => v },
-    { key: "total_tokens_saved",   label: "Tokens Saved",       fmt: v => v },
-    { key: "avg_reduction_pct",    label: "Avg Reduction",      fmt: v => v + "%" },
-    { key: "total_cost_saved_usd", label: "Cost Saved (est)",   fmt: v => "$" + Number(v).toFixed(4) },
-    { key: "total_carbon_saved_g", label: "CO₂ Saved (est)",    fmt: v => Number(v).toFixed(2) + "<small> g</small>" },
-    { key: "total_gpu_ms_saved",   label: "GPU-ms Saved (est)", fmt: v => Number(v).toFixed(1) + "<small> ms</small>" },
+  const $ = id => document.getElementById(id);
+  $("ratio").addEventListener("input", () => $("ratioval").textContent = Number($("ratio").value).toFixed(2));
+
+  const AGG = [
+    { k:"total_requests",       l:"Requests",        f:v=>v },
+    { k:"total_tokens_saved",   l:"Tokens Saved",    f:v=>v },
+    { k:"avg_reduction_pct",    l:"Avg Reduction",   f:v=>v+"%" },
+    { k:"throughput_tokens_per_sec", l:"Throughput", f:v=>v+"<small> tok/s</small>" },
+    { k:"total_carbon_saved_g", l:"CO₂ Saved (est)", f:v=>Number(v).toFixed(3)+"<small> g</small>" },
+    { k:"total_gpu_ms_saved",   l:"GPU-ms Saved (est)", f:v=>Number(v).toFixed(1)+"<small> ms</small>" },
   ];
-  async function load() {
-    const grid = document.getElementById("grid");
+
+  async function loadAgg() {
     try {
-      const r = await fetch("/metrics");
-      const d = await r.json();
-      let html = CELLS.map(c =>
-        `<div class="cell"><div class="label">${c.label}</div>
-         <div class="value">${c.fmt(d[c.key] ?? 0)}</div></div>`).join("");
-      const cache = d.cache || {};
-      html += `<div class="cell"><div class="label">Cache Hit Rate</div>
-        <div class="value">${(cache.hit_rate_pct ?? 0)}%</div></div>`;
-      html += `<div class="cell"><div class="label">Cache Hits</div>
-        <div class="value">${(cache.hits_exact ?? 0) + (cache.hits_semantic ?? 0)}
-        <small> / ${cache.size ?? 0} cached</small></div></div>`;
-      grid.innerHTML = html;
-    } catch (e) {
-      grid.innerHTML = `<div class="cell"><div class="label">Error</div>
-        <div class="value" style="font-size:14px">metrics unavailable</div></div>`;
+      const d = await (await fetch("/metrics")).json();
+      $("grid").innerHTML = AGG.map(c =>
+        `<div class="cell"><div class="clabel">${c.l}</div><div class="cval">${c.f(d[c.k] ?? 0)}</div></div>`).join("");
+    } catch(e) {}
+  }
+
+  function chip(k, v, est) {
+    return `<div class="chip ${est?'est':''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  }
+
+  function showResult(r) {
+    $("resultSection").style.display = "block";
+    $("pOrig").textContent = r.original_text;
+    $("pComp").textContent = r.compressed_text;
+    let html = "";
+    html += chip("Tokens", `${r.original_tokens}→${r.compressed_tokens}`, false);
+    html += chip("Reduction", `${r.reduction_pct}%`, false);
+    html += chip("Latency", `${r.latency_ms} ms`, false);
+    html += chip("Mode", r.cache_hit ? `cache:${r.cache_type}` : r.mode, false);
+    html += chip("Cost saved", `$${Number(r.est_cost_saved_usd).toFixed(6)}`, true);
+    html += chip("CO₂ saved", `${Number(r.est_carbon_saved_g).toFixed(4)} g`, true);
+    html += chip("GPU-ms saved", `${Number(r.est_gpu_ms_saved).toFixed(2)}`, true);
+    if (r.routed) html += chip("Routed →", `${r.routed.recommended_model} (${r.routed.tier})`, false);
+    $("chips").innerHTML = html;
+  }
+
+  async function run() {
+    const prompt = $("prompt").value.trim();
+    $("err").textContent = "";
+    if (prompt.length < 3) { $("err").textContent = "Enter a prompt (min 3 chars)."; return; }
+    const btn = $("run"); btn.disabled = true; btn.textContent = "COMPRESSING…";
+    try {
+      const res = await fetch("/compress", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          target_ratio: Number($("ratio").value),
+          target_model: $("model").value,
+          quality: $("quality").checked,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) { $("err").textContent = d.error || "compression failed"; }
+      else { showResult(d); await loadAgg(); }
+    } catch(e) {
+      $("err").textContent = "request failed: " + e.message;
+    } finally {
+      btn.disabled = false; btn.textContent = "COMPRESS →";
     }
   }
-  document.getElementById("refresh").addEventListener("click", load);
-  load();
+
+  $("run").addEventListener("click", run);
+  $("refresh").addEventListener("click", loadAgg);
+  loadAgg();
 </script>
 </body>
 </html>
