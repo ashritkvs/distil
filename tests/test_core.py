@@ -181,6 +181,44 @@ def test_forecast_insufficient_then_projects():
     assert out["estimated"] is True
 
 
+def test_verify_meaning_graceful_without_key(monkeypatch):
+    from core.verify import verify_meaning
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    v = verify_meaning("original text here", "original text")
+    assert v["verified"] is False
+    assert v["score"] is None
+
+
+def test_compress_safe_returns_valid_result(monkeypatch):
+    from core.verify import compress_safe
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    # no key -> can't verify -> returns first attempt flagged unverified
+    d = compress_safe(VERBOSE, 0.5)
+    assert "compressed_text" in d
+    assert d["verified"] is False
+
+
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
+def test_verify_meaning_scores_identical_high():
+    from core.verify import verify_meaning
+    t = "Explain how neural networks learn using backpropagation."
+    v = verify_meaning(t, t)
+    assert v["verified"] is True
+    assert v["score"] >= 85
+
+
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
+def test_compress_safe_never_ships_broken(monkeypatch):
+    from core.verify import compress_safe
+    d = compress_safe(VERBOSE, 0.3, min_score=75)
+    # either it passed, or it fell back to the original (reduction 0)
+    assert d["verified"] is True
+    if d.get("safe_fallback"):
+        assert d["reduction_pct"] == 0.0
+    else:
+        assert d["meaning_score"] >= 75
+
+
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
 def test_llm_mode_runs():
     r = compress(VERBOSE, target_ratio=0.5, quality=True, use_cache=False)

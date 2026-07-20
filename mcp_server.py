@@ -21,6 +21,8 @@ from core.cache import cache
 from core.forecast import forecast as _forecast
 from core.routing import route as _route
 from core.store import store
+from core.verify import compress_safe as _compress_safe
+from core.verify import verify_meaning as _verify_meaning
 
 load_dotenv()
 
@@ -48,6 +50,9 @@ def compress_prompt(
     quality: bool = False,
     target_model: str = "gpt-4o-mini",
     use_cache: bool = True,
+    verify: bool = False,
+    safe: bool = False,
+    min_score: int = 75,
 ) -> dict:
     """Compress a prompt and return full TraceFlow metrics.
 
@@ -56,21 +61,45 @@ def compress_prompt(
         target_ratio: fraction of tokens to retain (0-1). Lower = smaller.
         quality: if true, use the gpt-4o-mini LLM path (needs OPENAI_API_KEY);
             otherwise the fast, free, local heuristic.
-        target_model: model the compressed prompt will be sent to (drives the
-            cost/energy/carbon/compute estimates). Pass "auto" to route by
-            complexity.
+        target_model: model the compressed prompt will be sent to. Pass "auto"
+            to route by complexity.
         use_cache: consult/populate the semantic cache (default true).
+        verify: if true, LLM-score how well meaning is preserved (needs key).
+        safe: if true, apply a quality gate — retry gentler and fall back to the
+            original if the compression scores below min_score (never ships a
+            meaning-breaking result). Implies verification.
+        min_score: pass threshold for verify/safe (0-100).
     """
     try:
-        result = _compress(text, target_ratio=target_ratio, quality=quality,
-                           target_model=target_model, use_cache=use_cache)
+        if safe:
+            d = _compress_safe(text, target_ratio, quality, target_model, min_score)
+        else:
+            result = _compress(text, target_ratio=target_ratio, quality=quality,
+                               target_model=target_model, use_cache=use_cache)
+            d = result.to_dict()
+            if verify and not d.get("cache_hit"):
+                v = _verify_meaning(text, d["compressed_text"])
+                d["meaning_score"] = v.get("score")
+                d["meaning_pass"] = v.get("pass")
+                d["meaning_reasoning"] = v.get("reasoning")
+                d["lost_concepts"] = v.get("lost_concepts", [])
+                d["verified"] = v.get("verified", False)
     except Exception as e:
         store.record_error(type(e).__name__, text)
         raise
-    d = result.to_dict()
     if not d.get("cache_hit"):
-        store.record(d)  # count real compressions, not cache replays
+        store.record(d)
     return d
+
+
+@mcp.tool()
+def verify_meaning(original: str, compressed: str) -> dict:
+    """Score 0-100 how well a compressed prompt preserves the original's intent.
+
+    Uses an LLM judge (needs OPENAI_API_KEY). Returns score, pass (>=75),
+    reasoning, and any lost concepts.
+    """
+    return _verify_meaning(original, compressed)
 
 
 @mcp.tool()

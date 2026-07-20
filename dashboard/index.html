@@ -79,6 +79,7 @@
         </select>
       </label>
       <label><input type="checkbox" id="quality" /> High quality (LLM · uses OpenAI)</label>
+      <label><input type="checkbox" id="safe" /> Safe mode (verify · never breaks meaning)</label>
     </div>
     <button id="run">COMPRESS →</button>
     <div class="err" id="err"></div>
@@ -150,6 +151,8 @@
     html += chip("CO₂ saved", `${Number(r.est_carbon_saved_g).toFixed(4)} g`, true);
     html += chip("GPU-ms saved", `${Number(r.est_gpu_ms_saved).toFixed(2)}`, true);
     if (r.routed) html += chip("Routed →", `${r.routed.recommended_model} (${r.routed.tier})`, false);
+    if (r.meaning_score != null) html += chip("Meaning score", `${r.meaning_score}/100${r.safe_fallback ? " · fell back" : ""}`, false);
+    else if (r.verified === false && r.meaning_reasoning) html += chip("Verify", "needs OpenAI key", false);
     $("chips").innerHTML = html;
   }
 
@@ -166,6 +169,7 @@
           target_ratio: Number($("ratio").value),
           target_model: $("model").value,
           quality: $("quality").checked,
+          safe: $("safe").checked,
         }),
       });
       const d = await res.json();

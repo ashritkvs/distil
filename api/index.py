@@ -66,17 +66,29 @@ async def compress_endpoint(request):
     if len(prompt) > 6000:
         return JSONResponse({"error": "prompt too long (max 6000 chars)"},
                             status_code=422)
+    ratio = float(data.get("target_ratio", 0.5))
+    quality = bool(data.get("quality", False))
+    model = data.get("target_model") or "gpt-4o-mini"
+    verify = bool(data.get("verify", False))
+    safe = bool(data.get("safe", False))
     try:
-        result = _compress(
-            prompt,
-            target_ratio=float(data.get("target_ratio", 0.5)),
-            quality=bool(data.get("quality", False)),
-            target_model=data.get("target_model") or "gpt-4o-mini",
-        )
+        if safe:
+            from core.verify import compress_safe
+            d = compress_safe(prompt, ratio, quality, model,
+                              int(data.get("min_score", 75)))
+        else:
+            d = _compress(prompt, target_ratio=ratio, quality=quality,
+                          target_model=model).to_dict()
+            if verify and not d.get("cache_hit"):
+                from core.verify import verify_meaning
+                v = verify_meaning(prompt, d["compressed_text"])
+                d.update({"meaning_score": v.get("score"),
+                          "meaning_pass": v.get("pass"),
+                          "meaning_reasoning": v.get("reasoning"),
+                          "verified": v.get("verified", False)})
     except Exception as e:
         store.record_error(type(e).__name__, prompt)
         return JSONResponse({"error": str(e)}, status_code=500)
-    d = result.to_dict()
     if not d.get("cache_hit"):
         store.record(d)
     return JSONResponse(d)
