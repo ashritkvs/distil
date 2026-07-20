@@ -52,6 +52,39 @@ async def records_endpoint(request):
     return JSONResponse(store.all_records()[:100])
 
 
+async def violations_endpoint(request):
+    return JSONResponse(store.violations(50))
+
+
+async def process_endpoint(request):
+    """Unified gateway: govern + compress a prompt."""
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid JSON"}, status_code=400)
+    prompt = (data.get("prompt") or "").strip()
+    if len(prompt) < 3:
+        return JSONResponse({"error": "prompt too short (min 3 chars)"},
+                            status_code=422)
+    if len(prompt) > 6000:
+        return JSONResponse({"error": "prompt too long (max 6000 chars)"},
+                            status_code=422)
+    from core.pipeline import process
+    try:
+        d = process(
+            prompt,
+            target_ratio=float(data.get("target_ratio", 0.5)),
+            quality=bool(data.get("quality", False)),
+            target_model=data.get("target_model") or "gpt-4o-mini",
+            safe=bool(data.get("safe", False)),
+            enforce=bool(data.get("enforce", True)),
+        )
+    except Exception as e:
+        store.record_error(type(e).__name__, prompt)
+        return JSONResponse({"error": str(e)}, status_code=500)
+    return JSONResponse(d)
+
+
 async def compress_endpoint(request):
     """Compress a prompt from the dashboard and record it. Public (heuristic
     is free; quality=true spends the server's OpenAI credits)."""
@@ -114,7 +147,9 @@ async def engineering(request):
 app = mcp.streamable_http_app()
 app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 app.add_route("/records", records_endpoint, methods=["GET"])
+app.add_route("/violations", violations_endpoint, methods=["GET"])
 app.add_route("/compress", compress_endpoint, methods=["POST"])
+app.add_route("/process", process_endpoint, methods=["POST"])
 app.add_route("/engineering", engineering, methods=["GET"])
 app.add_route("/", dashboard, methods=["GET"])
 app.add_middleware(APIKeyMiddleware)

@@ -18,7 +18,10 @@ from core import compress as _compress
 from core import estimates
 from core.aiops import detect_anomalies as _detect_anomalies
 from core.cache import cache
+from core.classify import classify as _classify
 from core.forecast import forecast as _forecast
+from core.governance import govern as _govern
+from core.pipeline import process as _process
 from core.routing import route as _route
 from core.store import store
 from core.verify import compress_safe as _compress_safe
@@ -100,6 +103,48 @@ def verify_meaning(original: str, compressed: str) -> dict:
     reasoning, and any lost concepts.
     """
     return _verify_meaning(original, compressed)
+
+
+@mcp.tool()
+def process_prompt(
+    text: str,
+    target_ratio: float = 0.5,
+    quality: bool = False,
+    target_model: str = "gpt-4o-mini",
+    verify: bool = False,
+    safe: bool = False,
+    enforce: bool = True,
+) -> dict:
+    """UNIFIED gateway: govern + compress a prompt in one call.
+
+    Runs classification, content-security, moderation, package-policy, and
+    code-vuln checks, then (if not blocked) compresses. Returns one combined
+    report with verdict (allow/warn/block), governance detail, and compression
+    metrics. This is the main entrypoint that ties everything together.
+    """
+    return _process(text, target_ratio=target_ratio, quality=quality,
+                    target_model=target_model, verify=verify, safe=safe,
+                    enforce=enforce)
+
+
+@mcp.tool()
+def govern_prompt(text: str) -> dict:
+    """Governance only (no compression): classification, content-security,
+    moderation, package-policy, and code-vuln checks with a verdict."""
+    return _govern(text)
+
+
+@mcp.tool()
+def classify_prompt(text: str) -> dict:
+    """Classify a prompt's output type: enquiry, code, testing, draft, ppt,
+    refinement, or other."""
+    return _classify(text)
+
+
+@mcp.tool()
+def get_violations(n: int = 50) -> list[dict]:
+    """Return recent governance violations (warn/block verdicts)."""
+    return store.violations(n)
 
 
 @mcp.tool()

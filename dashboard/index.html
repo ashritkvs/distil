@@ -51,6 +51,13 @@
   a { color:#000; font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
   .note { margin-top:22px; font-size:11px; color:#888; line-height:1.6; }
   .err { color:#c00; font-size:12px; margin-top:8px; }
+  .verdict { margin-top:16px; padding:12px 14px; border:1px solid #000; font-size:13px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .badge { font-family:"JetBrains Mono",monospace; font-weight:500; padding:2px 10px; border:1px solid #000; font-size:12px; }
+  .badge.allow { background:#fff; color:#000; }
+  .badge.warn  { background:#000; color:#fff; }
+  .badge.block { background:#000; color:#fff; }
+  .verdict .meta { font-size:12px; color:#444; }
+  .verdict .reasons { font-family:"JetBrains Mono",monospace; font-size:11px; color:#000; }
 </style>
 </head>
 <body>
@@ -88,7 +95,8 @@
   <!-- RESULT -->
   <div class="section" id="resultSection" style="display:none;">
     <div class="label">Result</div>
-    <div class="panels">
+    <div class="verdict" id="verdict"></div>
+    <div class="panels" id="cmpPanels">
       <div class="panel"><div class="panel-head">Original</div><div class="panel-body" id="pOrig"></div></div>
       <div class="panel"><div class="panel-head">Compressed</div><div class="panel-body" id="pComp"></div></div>
     </div>
@@ -138,8 +146,26 @@
     return `<div class="chip ${est?'est':''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
   }
 
+  function showVerdict(r) {
+    const v = r.verdict || "allow";
+    const g = r.governance || {};
+    const cls = (g.classification || {}).category || "—";
+    const reasons = (r.reasons && r.reasons.length) ? r.reasons.join(" · ") : "no issues";
+    $("verdict").innerHTML =
+      `<span class="badge ${v}">${v.toUpperCase()}</span>` +
+      `<span class="meta">type: <b>${cls}</b></span>` +
+      `<span class="reasons">${reasons}</span>`;
+  }
+
   function showResult(r) {
     $("resultSection").style.display = "block";
+    showVerdict(r);
+    if (r.blocked) {
+      $("cmpPanels").style.display = "none";
+      $("chips").innerHTML = "";
+      return;
+    }
+    $("cmpPanels").style.display = "grid";
     $("pOrig").textContent = r.original_text;
     $("pComp").textContent = r.compressed_text;
     let html = "";
@@ -162,7 +188,7 @@
     if (prompt.length < 3) { $("err").textContent = "Enter a prompt (min 3 chars)."; return; }
     const btn = $("run"); btn.disabled = true; btn.textContent = "COMPRESSING…";
     try {
-      const res = await fetch("/compress", {
+      const res = await fetch("/process", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
@@ -170,6 +196,7 @@
           target_model: $("model").value,
           quality: $("quality").checked,
           safe: $("safe").checked,
+          enforce: true,
         }),
       });
       const d = await res.json();

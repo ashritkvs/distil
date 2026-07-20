@@ -43,6 +43,11 @@ def error_entry(error_type: str, preview: str = "") -> dict:
             "error_type": error_type, "preview": preview[:60]}
 
 
+def violation_entry(verdict: str, reasons: list[str], preview: str = "") -> dict:
+    return {"ts": time.time(), "kind": "violation", "verdict": verdict,
+            "reasons": reasons, "preview": preview[:60]}
+
+
 def _summarize(records: list[dict]) -> dict:
     ok = [r for r in records if r.get("kind") != "error"]
     errors = [r for r in records if r.get("kind") == "error"]
@@ -70,8 +75,10 @@ def _summarize(records: list[dict]) -> dict:
             "throughput_tokens_per_sec": round(
                 tokens_processed / total_latency_s, 1) if total_latency_s > 0 else 0.0,
         }
+    violations = [r for r in records if r.get("kind") == "violation"]
     base["errors"] = len(errors)
     base["error_rate_pct"] = round(len(errors) / total * 100, 1) if total else 0.0
+    base["violations"] = len(violations)
     return base
 
 
@@ -145,6 +152,19 @@ class MetricsStore:
             self._backend.push(error_entry(error_type, preview))
         except Exception:
             pass
+
+    def record_violation(self, verdict: str, reasons: list[str], preview: str = ""):
+        try:
+            self._backend.push(violation_entry(verdict, reasons, preview))
+        except Exception:
+            pass
+
+    def violations(self, n: int = 50) -> list[dict]:
+        try:
+            return [r for r in self._backend.all()
+                    if r.get("kind") == "violation"][:n]
+        except Exception:
+            return []
 
     def summary(self) -> dict:
         try:
