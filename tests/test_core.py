@@ -314,6 +314,28 @@ def test_manifest():
     assert m["mcp_endpoint"] == "/mcp"
 
 
+def test_rate_limiter_blocks_after_limit(monkeypatch):
+    monkeypatch.setenv("TF_RATE_LIMIT", "3")
+    monkeypatch.setenv("TF_RATE_WINDOW", "60")
+    monkeypatch.delenv("UPSTASH_REDIS_REST_URL", raising=False)
+    from core.ratelimit import RateLimiter
+    rl = RateLimiter()
+    results = [rl.check("tenant-x")["allowed"] for _ in range(5)]
+    assert results == [True, True, True, False, False]
+    # a different identity has its own budget
+    assert rl.check("tenant-y")["allowed"] is True
+
+
+def test_multi_tenant_auth(monkeypatch):
+    monkeypatch.setenv("TF_API_KEYS", "key-a,key-b")
+    monkeypatch.delenv("CONNECTOR_API_KEY", raising=False)
+    from core.ratelimit import is_valid_key, auth_required
+    assert auth_required() is True
+    assert is_valid_key("key-a") is True
+    assert is_valid_key("key-b") is True
+    assert is_valid_key("wrong") is False
+
+
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
 def test_llm_mode_runs():
     r = compress(VERBOSE, target_ratio=0.5, quality=True, use_cache=False)

@@ -23,22 +23,48 @@ _DASHBOARD = os.path.join(_DASH_DIR, "index.html")
 _ENGINEERING = os.path.join(_DASH_DIR, "engineering.html")
 
 
-class APIKeyMiddleware(BaseHTTPMiddleware):
-    """Gate `/mcp` with a bearer token / x-api-key matching CONNECTOR_API_KEY.
+# Endpoints that consume compute — gated by auth (if configured) + rate limits.
+_PROTECTED_PREFIXES = ("/mcp", "/process", "/compress")
 
-    Read-only `/metrics` and `/` (dashboard) stay public.
+
+def _extract_key(request) -> str:
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth[7:]
+    return request.headers.get("x-api-key", "")
+
+
+class GatewayMiddleware(BaseHTTPMiddleware):
+    """Multi-tenant auth + per-identity rate limiting on compute endpoints.
+
+    Read-only `/metrics`, `/records`, `/violations`, `/manifest`, and the
+    dashboards stay public.
     """
 
     async def dispatch(self, request, call_next):
-        required = os.getenv("CONNECTOR_API_KEY")
-        if required and request.url.path.startswith("/mcp"):
-            auth = request.headers.get("authorization", "")
-            token = (
-                auth[7:] if auth.lower().startswith("bearer ")
-                else request.headers.get("x-api-key", "")
-            )
-            if token != required:
+        from core.ratelimit import auth_required, is_valid_key, limiter
+
+        path = request.url.path
+        if any(path.startswith(p) for p in _PROTECTED_PREFIXES):
+            key = _extract_key(request)
+            # Auth (only enforced when keys are configured).
+            if auth_required() and not is_valid_key(key):
                 return JSONResponse({"error": "unauthorized"}, status_code=401)
+            # Rate limit per tenant key (or client IP if anonymous).
+            identity = key or (request.client.host if request.client else "anon")
+            rl = limiter.check(identity)
+            if not rl["allowed"]:
+                return JSONResponse(
+                    {"error": "rate_limit_exceeded", "limit": rl["limit"],
+                     "reset_in_seconds": rl["reset_in"]},
+                    status_code=429,
+                    headers={"Retry-After": str(rl["reset_in"]),
+                             "X-RateLimit-Limit": str(rl["limit"]),
+                             "X-RateLimit-Remaining": str(rl["remaining"])})
+            response = await call_next(request)
+            response.headers["X-RateLimit-Limit"] = str(rl["limit"])
+            response.headers["X-RateLimit-Remaining"] = str(rl["remaining"])
+            return response
         return await call_next(request)
 
 
@@ -160,4 +186,4 @@ app.add_route("/compress", compress_endpoint, methods=["POST"])
 app.add_route("/process", process_endpoint, methods=["POST"])
 app.add_route("/engineering", engineering, methods=["GET"])
 app.add_route("/", dashboard, methods=["GET"])
-app.add_middleware(APIKeyMiddleware)
+app.add_middleware(GatewayMiddleware)
