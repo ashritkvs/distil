@@ -52,6 +52,7 @@ class GatewayMiddleware(BaseHTTPMiddleware):
                 return JSONResponse({"error": "unauthorized"}, status_code=401)
             # Rate limit per tenant key (or client IP if anonymous).
             identity = key or (request.client.host if request.client else "anon")
+            request.state.tenant = identity
             rl = limiter.check(identity)
             if not rl["allowed"]:
                 return JSONResponse(
@@ -61,6 +62,13 @@ class GatewayMiddleware(BaseHTTPMiddleware):
                     headers={"Retry-After": str(rl["reset_in"]),
                              "X-RateLimit-Limit": str(rl["limit"]),
                              "X-RateLimit-Remaining": str(rl["remaining"])})
+            # Monthly plan quota
+            from core.plans import check_quota
+            q = check_quota(identity)
+            if not q["allowed"]:
+                return JSONResponse(
+                    {"error": "quota_exceeded", "plan": q["plan"],
+                     "usage": q["usage"]}, status_code=402)
             response = await call_next(request)
             response.headers["X-RateLimit-Limit"] = str(rl["limit"])
             response.headers["X-RateLimit-Remaining"] = str(rl["remaining"])
@@ -89,6 +97,13 @@ async def manifest_endpoint(request):
     return JSONResponse(get_manifest())
 
 
+async def usage_endpoint(request):
+    from core.plans import usage
+    tenant = getattr(request.state, "tenant", None) or \
+        request.headers.get("x-api-key", "anon")
+    return JSONResponse(usage(tenant))
+
+
 async def process_endpoint(request):
     """Unified gateway: govern + compress a prompt."""
     try:
@@ -110,12 +125,21 @@ async def process_endpoint(request):
             quality=bool(data.get("quality", False)),
             target_model=data.get("target_model") or "gpt-4o-mini",
             safe=bool(data.get("safe", False)),
+            adaptive=bool(data.get("adaptive", False)),
             enforce=bool(data.get("enforce", True)),
         )
     except Exception as e:
         store.record_error(type(e).__name__, prompt)
         return JSONResponse({"error": str(e)}, status_code=500)
+    _meter(request, d)
     return JSONResponse(d)
+
+
+def _meter(request, d):
+    """Record billable usage for the tenant (identity set by the middleware)."""
+    from core.plans import record_usage
+    tenant = getattr(request.state, "tenant", "anon")
+    record_usage(tenant, d.get("original_tokens", 0) or 0)
 
 
 async def compress_endpoint(request):
@@ -157,6 +181,7 @@ async def compress_endpoint(request):
         return JSONResponse({"error": str(e)}, status_code=500)
     if not d.get("cache_hit"):
         store.record(d)
+    _meter(request, d)
     return JSONResponse(d)
 
 
@@ -182,6 +207,7 @@ app.add_route("/metrics", metrics_endpoint, methods=["GET"])
 app.add_route("/records", records_endpoint, methods=["GET"])
 app.add_route("/violations", violations_endpoint, methods=["GET"])
 app.add_route("/manifest", manifest_endpoint, methods=["GET"])
+app.add_route("/usage", usage_endpoint, methods=["GET"])
 app.add_route("/compress", compress_endpoint, methods=["POST"])
 app.add_route("/process", process_endpoint, methods=["POST"])
 app.add_route("/engineering", engineering, methods=["GET"])

@@ -28,6 +28,7 @@ from core.policy import check_packages as _check_packages
 from core.providers import list_providers as _list_providers
 from core.routing import route as _route
 from core.store import store
+from core.verify import compress_adaptive as _compress_adaptive
 from core.verify import compress_safe as _compress_safe
 from core.verify import verify_meaning as _verify_meaning
 
@@ -117,18 +118,28 @@ def process_prompt(
     target_model: str = "gpt-4o-mini",
     verify: bool = False,
     safe: bool = False,
+    adaptive: bool = False,
     enforce: bool = True,
 ) -> dict:
     """UNIFIED gateway: govern + compress a prompt in one call.
 
     Runs classification, content-security, moderation, package-policy, and
-    code-vuln checks, then (if not blocked) compresses. Returns one combined
-    report with verdict (allow/warn/block), governance detail, and compression
-    metrics. This is the main entrypoint that ties everything together.
+    code-vuln checks, then (if not blocked) compresses. `adaptive=True` uses the
+    free heuristic and only escalates to the LLM if meaning drops (best
+    quality/cost). Returns one combined report with verdict + metrics.
     """
     return _process(text, target_ratio=target_ratio, quality=quality,
                     target_model=target_model, verify=verify, safe=safe,
-                    enforce=enforce)
+                    adaptive=adaptive, enforce=enforce)
+
+
+@mcp.tool()
+def compress_adaptive(text: str, target_ratio: float = 0.5,
+                      target_model: str = "gpt-4o-mini",
+                      min_score: int = 75) -> dict:
+    """Adaptive compression: free heuristic first, escalate to the LLM only if
+    the heuristic scores below min_score (needs OPENAI_API_KEY to verify)."""
+    return _compress_adaptive(text, target_ratio, target_model, min_score)
 
 
 @mcp.tool()
@@ -176,6 +187,20 @@ def scan_code(text: str) -> dict:
     """Scan code in a prompt/response for dangerous patterns (eval, shell=True,
     pickle, SQL injection, hardcoded secrets, weak hashing, etc.)."""
     return _scan_code(text)
+
+
+@mcp.tool()
+def get_usage(tenant: str = "anon") -> dict:
+    """Current-month usage + remaining quota for a tenant (plan-based)."""
+    from core.plans import usage
+    return usage(tenant)
+
+
+@mcp.tool()
+def list_plans() -> dict:
+    """List available subscription plan tiers and their limits."""
+    from core.plans import PLANS
+    return {"plans": PLANS}
 
 
 @mcp.tool()

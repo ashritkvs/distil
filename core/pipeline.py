@@ -20,6 +20,7 @@ def process(
     target_model: str = "gpt-4o-mini",
     verify: bool = False,
     safe: bool = False,
+    adaptive: bool = False,
     min_score: int = 75,
     use_cache: bool = True,
     enforce: bool = True,
@@ -43,8 +44,11 @@ def process(
             "reasons": report["reasons"],
         }
 
-    # Otherwise compress (reusing safe/verify/normal paths).
-    if safe:
+    # Otherwise compress (reusing adaptive/safe/verify/normal paths).
+    if adaptive:
+        from core.verify import compress_adaptive
+        d = compress_adaptive(text, target_ratio, target_model, min_score)
+    elif safe:
         from core.verify import compress_safe
         d = compress_safe(text, target_ratio, quality, target_model, min_score)
     else:

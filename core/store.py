@@ -49,7 +49,7 @@ def violation_entry(verdict: str, reasons: list[str], preview: str = "") -> dict
 
 
 def _summarize(records: list[dict]) -> dict:
-    ok = [r for r in records if r.get("kind") != "error"]
+    ok = [r for r in records if r.get("kind") == "ok"]
     errors = [r for r in records if r.get("kind") == "error"]
     total = len(ok) + len(errors)
     if not ok:
@@ -176,14 +176,14 @@ class MetricsStore:
 
     def top_prompts(self, n: int = 5) -> list[dict]:
         try:
-            ok = [r for r in self._backend.all() if r.get("kind") != "error"]
+            ok = [r for r in self._backend.all() if r.get("kind") == "ok"]
         except Exception:
             return []
         return sorted(ok, key=lambda r: r["tokens_saved"], reverse=True)[:n]
 
     def all_records(self) -> list[dict]:
         try:
-            return [r for r in self._backend.all() if r.get("kind") != "error"]
+            return [r for r in self._backend.all() if r.get("kind") == "ok"]
         except Exception:
             return []
 

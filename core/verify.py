@@ -74,6 +74,31 @@ def _attach(result: dict, v: dict, safe_fallback: bool = False,
     return result
 
 
+def compress_adaptive(text: str, target_ratio: float = 0.5,
+                      target_model: str | None = None, min_score: int = 75) -> dict:
+    """Best quality per cost: try the free heuristic, verify it, and only
+    escalate to the LLM compressor if the heuristic scored below min_score.
+    Returns whichever attempt scored highest, flagged with `escalated`.
+    """
+    r = _compress(text, target_ratio, False, target_model, use_cache=False).to_dict()
+    v = verify_meaning(text, r["compressed_text"])
+    if not v.get("verified"):
+        r["escalated"] = False
+        return _attach(r, v)
+    if (v.get("score") or 0) >= min_score:
+        r["escalated"] = False
+        return _attach(r, v)  # heuristic already good enough — no LLM cost
+
+    # Escalate to the LLM compressor and keep the better of the two.
+    r2 = _compress(text, target_ratio, True, target_model, use_cache=False).to_dict()
+    v2 = verify_meaning(text, r2["compressed_text"])
+    if (v2.get("score") or 0) >= (v.get("score") or 0):
+        r2["escalated"] = True
+        return _attach(r2, v2)
+    r["escalated"] = True
+    return _attach(r, v)
+
+
 def compress_safe(text: str, target_ratio: float = 0.5, quality: bool = False,
                   target_model: str | None = None, min_score: int = 75) -> dict:
     """Compress with a verification quality gate.

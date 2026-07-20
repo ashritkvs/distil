@@ -336,6 +336,36 @@ def test_multi_tenant_auth(monkeypatch):
     assert is_valid_key("wrong") is False
 
 
+def test_plan_metering_and_quota(tmp_path, monkeypatch):
+    monkeypatch.setenv("TF_METRICS_PATH", str(tmp_path / "p.json"))
+    monkeypatch.setenv("TF_TENANT_PLANS", "keyX:free")
+    from core.store import MetricsStore
+    import core.plans as plans
+    s = MetricsStore()
+    monkeypatch.setattr(plans.store, "_backend", s._backend)
+    for _ in range(4):
+        plans.record_usage("keyX", 50)
+    u = plans.usage("keyX")
+    assert u["plan"] == "free"
+    assert u["used_requests"] == 4
+    assert u["used_tokens"] == 200
+    assert plans.check_quota("keyX")["allowed"] is True
+
+
+def test_heuristic_protects_leading_verb():
+    from core.compressor import heuristic_compress
+    out = heuristic_compress("Please explain in detail how DNS resolution works.", 0.4)
+    assert out.lower().startswith("explain")
+
+
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
+def test_adaptive_uses_heuristic_when_good():
+    from core.verify import compress_adaptive
+    d = compress_adaptive("Explain the difference between HTTP and HTTPS.", 0.5)
+    assert "escalated" in d
+    assert d["verified"] is True
+
+
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY not set")
 def test_llm_mode_runs():
     r = compress(VERBOSE, target_ratio=0.5, quality=True, use_cache=False)

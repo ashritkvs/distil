@@ -130,8 +130,20 @@ def heuristic_compress(text: str, target_ratio: float) -> str:
     orig_tokens = count_tokens(text)
     effective_ratio = max(target_ratio, 0.7) if orig_tokens <= 12 else target_ratio
     target_tokens = max(3, round(orig_tokens * effective_ratio))
+
+    # Protect the leading content word (usually the imperative verb — the core
+    # instruction) so compression never strips "Explain"/"Write"/"Design".
+    protected: set[int] = set()
+    for i, w in enumerate(deduped):
+        if not _is_func(w):
+            protected.add(i)
+            break
+
     if count_tokens(" ".join(deduped)) > target_tokens:
-        scored = sorted(range(len(deduped)), key=lambda i: _word_score(deduped[i]))
+        scored = sorted(
+            (i for i in range(len(deduped)) if i not in protected),
+            key=lambda i: _word_score(deduped[i]),
+        )
         drop: set[int] = set()
         for idx in scored:
             drop.add(idx)
@@ -184,14 +196,24 @@ def llm_compress(text: str, target_ratio: float) -> str:
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     pct = int(round((1 - target_ratio) * 100))
     system = (
-        "You compress prompts. Remove filler, politeness, and redundancy while "
-        "preserving every instruction, entity, and specific detail. Aim to cut "
-        f"roughly {pct}% of the tokens. Output ONLY the compressed prompt, no "
-        "preamble, no quotes."
+        "You are a prompt compressor. Rewrite the user's prompt using the fewest "
+        "words while preserving EVERY instruction, entity, constraint, number, "
+        "and specific detail. Keep it grammatical and unambiguous. Remove only "
+        f"filler, politeness, and redundancy. Target ~{pct}% fewer tokens. "
+        "Output ONLY the compressed prompt — no preamble, quotes, or explanation.\n\n"
+        "Example:\n"
+        "Input: Could you please possibly help me understand, in a very detailed "
+        "way, what a REST API is and how it works?\n"
+        "Output: Explain in detail what a REST API is and how it works.\n\n"
+        "Example:\n"
+        "Input: I would really like you to kindly write a Python function that "
+        "takes a list of integers and returns the sum of the even ones.\n"
+        "Output: Write a Python function returning the sum of even integers in a list."
     )
     resp = client.chat.completions.create(
         model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
         max_tokens=1024,
+        temperature=0.2,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": text},
