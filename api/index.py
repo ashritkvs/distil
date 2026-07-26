@@ -45,12 +45,16 @@ class GatewayMiddleware(BaseHTTPMiddleware):
         from core.ratelimit import auth_required, is_valid_key, limiter
 
         path = request.url.path
+        key = _extract_key(request)
+        authed = (not auth_required()) or is_valid_key(key)
+        request.state.authed = authed
+
         if any(path.startswith(p) for p in _PROTECTED_PREFIXES):
-            key = _extract_key(request)
-            # Auth (only enforced when keys are configured).
-            if auth_required() and not is_valid_key(key):
+            # /mcp always requires a valid key when auth is configured.
+            # /process and /compress allow anonymous access but run heuristic-
+            # only (no LLM/credit spend) — enforced in the endpoints.
+            if path.startswith("/mcp") and auth_required() and not authed:
                 return JSONResponse({"error": "unauthorized"}, status_code=401)
-            # Rate limit per tenant key (or client IP if anonymous).
             identity = key or (request.client.host if request.client else "anon")
             request.state.tenant = identity
             rl = limiter.check(identity)
@@ -118,16 +122,18 @@ async def process_endpoint(request):
         return JSONResponse({"error": "prompt too long (max 6000 chars)"},
                             status_code=422)
     from core.pipeline import process
+    authed = getattr(request.state, "authed", True)  # LLM only for authed keys
     try:
         d = process(
             prompt,
             target_ratio=float(data.get("target_ratio", 0.5)),
-            quality=bool(data.get("quality", False)),
+            quality=bool(data.get("quality", False)) and authed,
             target_model=data.get("target_model") or "gpt-4o-mini",
-            safe=bool(data.get("safe", False)),
-            adaptive=bool(data.get("adaptive", False)),
+            safe=bool(data.get("safe", False)) and authed,
+            adaptive=bool(data.get("adaptive", False)) and authed,
             enforce=bool(data.get("enforce", True)),
         )
+        d["llm_available"] = authed
     except Exception as e:
         store.record_error(type(e).__name__, prompt)
         return JSONResponse({"error": str(e)}, status_code=500)
@@ -156,11 +162,12 @@ async def compress_endpoint(request):
     if len(prompt) > 6000:
         return JSONResponse({"error": "prompt too long (max 6000 chars)"},
                             status_code=422)
+    authed = getattr(request.state, "authed", True)
     ratio = float(data.get("target_ratio", 0.5))
-    quality = bool(data.get("quality", False))
+    quality = bool(data.get("quality", False)) and authed
     model = data.get("target_model") or "gpt-4o-mini"
-    verify = bool(data.get("verify", False))
-    safe = bool(data.get("safe", False))
+    verify = bool(data.get("verify", False)) and authed
+    safe = bool(data.get("safe", False)) and authed
     try:
         if safe:
             from core.verify import compress_safe
