@@ -1,4 +1,4 @@
-"""Forecasting: project savings from the recent run-rate (TraceFlow §7).
+"""Forecasting: project savings from the recent run-rate (Distil §7).
 
 Extrapolates cost / carbon / token savings over a horizon from the rate
 observed in stored records. Flags low confidence when the observed window is

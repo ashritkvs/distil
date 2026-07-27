@@ -201,7 +201,7 @@ def _serve(path, fallback):
 
 
 async def dashboard(request):
-    return _serve(_DASHBOARD, "<h1>TraceFlow Compress</h1><p>See /metrics</p>")
+    return _serve(_DASHBOARD, "<h1>Distil</h1><p>See /metrics</p>")
 
 
 async def engineering(request):

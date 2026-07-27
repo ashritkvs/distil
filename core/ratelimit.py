@@ -6,9 +6,9 @@ Per-identity request limiting. Backend:
   * In-memory sliding window otherwise — best-effort (per warm instance).
 
 Config (env):
-  TF_RATE_LIMIT   requests per window (default 60)
-  TF_RATE_WINDOW  window seconds (default 60)
-  TF_API_KEYS     comma list of tenant API keys (in addition to CONNECTOR_API_KEY)
+  DISTIL_RATE_LIMIT   requests per window (default 60)
+  DISTIL_RATE_WINDOW  window seconds (default 60)
+  DISTIL_API_KEYS     comma list of tenant API keys (in addition to CONNECTOR_API_KEY)
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from threading import Lock
 
 
 def allowed_keys() -> set[str]:
-    keys = {k.strip() for k in os.getenv("TF_API_KEYS", "").split(",") if k.strip()}
+    keys = {k.strip() for k in os.getenv("DISTIL_API_KEYS", "").split(",") if k.strip()}
     ck = os.getenv("CONNECTOR_API_KEY")
     if ck:
         keys.add(ck)
@@ -38,8 +38,8 @@ def is_valid_key(key: str | None) -> bool:
 
 class RateLimiter:
     def __init__(self):
-        self.limit = int(os.getenv("TF_RATE_LIMIT", "60"))
-        self.window = int(os.getenv("TF_RATE_WINDOW", "60"))
+        self.limit = int(os.getenv("DISTIL_RATE_LIMIT", "60"))
+        self.window = int(os.getenv("DISTIL_RATE_WINDOW", "60"))
         self._mem: dict[str, deque] = defaultdict(deque)
         self._lock = Lock()
         self._upstash = None

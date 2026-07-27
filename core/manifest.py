@@ -10,8 +10,8 @@ import os
 
 MANIFEST = {
     "schema_version": "1.0",
-    "name": "traceflow-compress",
-    "display_name": "TraceFlow Compress — Prompt Governance & Compression",
+    "name": "distil",
+    "display_name": "Distil — Prompt Governance & Compression",
     "description": (
         "A governance + token-optimization gateway for LLM prompts: classifies, "
         "security-scans, moderates, and policy-checks prompts, then compresses "
@@ -41,7 +41,7 @@ MANIFEST = {
         "manifest": "/manifest",
     },
     "pricing_model": "free heuristic tier; LLM features require the operator's key",
-    "homepage": "https://github.com/ashritkvs/traceflow-compress",
+    "homepage": "https://github.com/ashritkvs/distil",
 }
 
 

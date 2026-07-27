@@ -150,7 +150,7 @@ def test_aiops_insufficient_then_detects():
 
 def test_store_throughput_and_reliability(tmp_path):
     from core.store import MetricsStore
-    os.environ["TF_METRICS_PATH"] = str(tmp_path / "m.json")
+    os.environ["DISTIL_METRICS_PATH"] = str(tmp_path / "m.json")
     s = MetricsStore()
     for _ in range(3):
         s.record({"original_text": "x", "original_tokens": 40, "compressed_tokens": 20,
@@ -164,7 +164,7 @@ def test_store_throughput_and_reliability(tmp_path):
     assert summ["error_rate_pct"] == 25.0
     assert summ["throughput_tokens_per_sec"] > 0
     assert summ["avg_latency_ms"] == 4.0
-    del os.environ["TF_METRICS_PATH"]
+    del os.environ["DISTIL_METRICS_PATH"]
 
 
 def test_forecast_insufficient_then_projects():
@@ -274,8 +274,8 @@ def test_governance_blocks_denied_package():
 def test_budget(tmp_path, monkeypatch):
     from core.store import MetricsStore
     import core.budget as budget_mod
-    monkeypatch.setenv("TF_METRICS_PATH", str(tmp_path / "b.json"))
-    monkeypatch.setenv("TF_TOKEN_BUDGET", "1000")
+    monkeypatch.setenv("DISTIL_METRICS_PATH", str(tmp_path / "b.json"))
+    monkeypatch.setenv("DISTIL_TOKEN_BUDGET", "1000")
     s = MetricsStore()
     monkeypatch.setattr(budget_mod, "store", s)
     s.record({"original_tokens": 100, "compressed_tokens": 50, "tokens_saved": 50})
@@ -309,14 +309,14 @@ def test_governance_flags_risky_code():
 def test_manifest():
     from core.manifest import get_manifest
     m = get_manifest()
-    assert m["name"] == "traceflow-compress"
+    assert m["name"] == "distil"
     assert "prompt-compression" in m["capabilities"]
     assert m["mcp_endpoint"] == "/mcp"
 
 
 def test_rate_limiter_blocks_after_limit(monkeypatch):
-    monkeypatch.setenv("TF_RATE_LIMIT", "3")
-    monkeypatch.setenv("TF_RATE_WINDOW", "60")
+    monkeypatch.setenv("DISTIL_RATE_LIMIT", "3")
+    monkeypatch.setenv("DISTIL_RATE_WINDOW", "60")
     monkeypatch.delenv("UPSTASH_REDIS_REST_URL", raising=False)
     from core.ratelimit import RateLimiter
     rl = RateLimiter()
@@ -327,7 +327,7 @@ def test_rate_limiter_blocks_after_limit(monkeypatch):
 
 
 def test_multi_tenant_auth(monkeypatch):
-    monkeypatch.setenv("TF_API_KEYS", "key-a,key-b")
+    monkeypatch.setenv("DISTIL_API_KEYS", "key-a,key-b")
     monkeypatch.delenv("CONNECTOR_API_KEY", raising=False)
     from core.ratelimit import is_valid_key, auth_required
     assert auth_required() is True
@@ -337,8 +337,8 @@ def test_multi_tenant_auth(monkeypatch):
 
 
 def test_plan_metering_and_quota(tmp_path, monkeypatch):
-    monkeypatch.setenv("TF_METRICS_PATH", str(tmp_path / "p.json"))
-    monkeypatch.setenv("TF_TENANT_PLANS", "keyX:free")
+    monkeypatch.setenv("DISTIL_METRICS_PATH", str(tmp_path / "p.json"))
+    monkeypatch.setenv("DISTIL_TENANT_PLANS", "keyX:free")
     from core.store import MetricsStore
     import core.plans as plans
     s = MetricsStore()

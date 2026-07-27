@@ -1,10 +1,10 @@
-"""Semantic compression cache (TraceFlow §8.2).
+"""Semantic compression cache (Distil §8.2).
 
 Two-tier, serverless-friendly, in-process cache:
   * Exact match — normalized-hash lookup (free, instant).
   * Similarity  — cosine over vectors:
       - default "lexical" mode: token-frequency cosine (free, no API).
-      - "embedding" mode (TF_CACHE_MODE=embedding + OPENAI_API_KEY): true
+      - "embedding" mode (DISTIL_CACHE_MODE=embedding + OPENAI_API_KEY): true
         semantic matching via OpenAI embeddings.
 
 Entries are namespaced by (target_ratio, quality, model). The cache is
@@ -34,7 +34,7 @@ def _vec_embedding(text: str) -> list[float]:
     from openai import OpenAI
 
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    model = os.getenv("TF_EMBED_MODEL", "text-embedding-3-small")
+    model = os.getenv("DISTIL_EMBED_MODEL", "text-embedding-3-small")
     resp = client.embeddings.create(model=model, input=text[:8000])
     return resp.data[0].embedding
 
@@ -57,10 +57,10 @@ class CompressionCache:
                  mode: str | None = None):
         self.max_entries = max_entries
         self.threshold = threshold
-        want = (mode or os.getenv("TF_CACHE_MODE", "lexical")).lower()
+        want = (mode or os.getenv("DISTIL_CACHE_MODE", "lexical")).lower()
         self.mode = "embedding" if (want == "embedding" and
                                     os.getenv("OPENAI_API_KEY")) else "lexical"
-        self.method = ("embedding:" + os.getenv("TF_EMBED_MODEL",
+        self.method = ("embedding:" + os.getenv("DISTIL_EMBED_MODEL",
                        "text-embedding-3-small")) if self.mode == "embedding" \
             else "lexical-cosine"
         self._exact: dict[str, int] = {}
@@ -145,6 +145,6 @@ class CompressionCache:
 
 
 cache = CompressionCache(
-    max_entries=int(os.getenv("TF_CACHE_MAX", "256")),
-    threshold=float(os.getenv("TF_CACHE_THRESHOLD", "0.92")),
+    max_entries=int(os.getenv("DISTIL_CACHE_MAX", "256")),
+    threshold=float(os.getenv("DISTIL_CACHE_THRESHOLD", "0.92")),
 )

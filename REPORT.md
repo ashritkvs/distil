@@ -1,16 +1,16 @@
-# TraceFlow Compress — Project Report
+# Distil — Project Report
 ### An LLM Governance & Token-Optimization Gateway
 
-**Live product:** https://traceflow-compress.vercel.app
-**MCP connector:** https://traceflow-compress.vercel.app/mcp
-**Source code:** https://github.com/ashritkvs/traceflow-compress
+**Live product:** https://distil.vercel.app
+**MCP connector:** https://distil.vercel.app/mcp
+**Source code:** https://github.com/ashritkvs/distil
 **Date:** July 2026
 
 ---
 
 ## 1. Executive summary
 
-TraceFlow Compress is a finished, working product that is live on the internet
+Distil is a finished, working product that is live on the internet
 right now. In simple terms, it is a **checkpoint that sits in front of an AI
 model.** Every time someone (a person or a software "agent") wants to send a
 prompt to an AI like ChatGPT or Claude, the prompt first passes through this
@@ -26,11 +26,12 @@ checkpoint. At the checkpoint, the system does five things automatically:
    much energy and carbon, how fast it ran.
 5. **Tracks usage** — who used it, how much of their plan they have left.
 
-This was built to satisfy **two documents at the same time**: the *TraceFlow*
-whitepaper (a design for token-based monitoring) and the *TokenOps* brief (a
-list of features for a token-usage and safety product). The finished product
-covers **every feature in the TokenOps brief** and about **70% of the TraceFlow
-whitepaper** — the part that does not need special GPU hardware to build.
+This was built to satisfy **two source documents at the same time**: an
+**Observability Whitepaper** (a design for token-based monitoring) and the
+**TokenOps** brief (a list of features for a token-usage and safety product).
+The finished product covers **every feature in the TokenOps brief** and about
+**70% of the Observability Whitepaper** — the part that does not need special
+GPU hardware to build.
 
 The product can be used three ways: as a **web page** anyone can open, as a
 plain **web API**, and as a **connector** that AI agents plug into directly. It
@@ -50,15 +51,16 @@ Companies and developers who use AI models run into three problems at once:
 - **Blindness.** Teams usually have no clear view of what is being spent, what
   is being sent, or whether anything risky is going through.
 
-TraceFlow Compress solves all three in one place, so a team does not need three
+Distil solves all three in one place, so a team does not need three
 separate tools.
 
 ---
 
 ## 3. Background — the two source documents (explained simply)
 
-**TraceFlow** was a design paper. Its main idea: for AI systems, you should
-measure everything by the **token** instead of by the request, and you should
+**The Observability Whitepaper** was a design paper. Its main idea: for AI
+systems, you should measure everything by the **token** instead of by the
+request, and you should
 connect token usage to real-world costs like money, energy, and carbon. It also
 described a "prompt intelligence" layer that spots wasted words and recommends
 compression.
@@ -71,7 +73,7 @@ different AI providers — plus notes on architecture, hosting, making it a
 connector, listing it on a marketplace, and controlling which code packages an
 AI agent is allowed to use.
 
-TraceFlow Compress is **one single product** that does both. It does not exist
+Distil is **one single product** that does both. It does not exist
 as two separate things — every feature lives in the same code, the same live
 website, and the same connector.
 
@@ -187,7 +189,7 @@ enterprise feature.
 
 ---
 
-## 6. What was built — the TraceFlow whitepaper (about 70%)
+## 6. What was built — the source whitepaper (about 70%)
 
 **Built:** measuring everything by tokens; connecting tokens to cost, energy,
 and carbon; the "prompt intelligence" layer (spotting waste and compressing);
@@ -211,7 +213,7 @@ infrastructure, not by effort.
 
 ## 7. How to see it working (demo)
 
-- **Easiest:** open **https://traceflow-compress.vercel.app** and paste a
+- **Easiest:** open **https://distil.vercel.app** and paste a
   prompt. Try a wordy question to see it shrink, then try a prompt with a fake
   Social Security number or an "ignore your instructions" line to watch it get
   **blocked**.
@@ -311,8 +313,8 @@ all-in-one" governance** for teams running AI agents.
 
 ## 11. Conclusion
 
-TraceFlow Compress is a complete, live, tested product that unifies the
-TraceFlow monitoring vision and the TokenOps feature brief into a single AI
+Distil is a complete, live, tested product that unifies the
+token-monitoring vision and the TokenOps feature brief into a single AI
 gateway. It genuinely shrinks prompts, blocks unsafe ones, measures cost and
 carbon, and works both as a website and as a connector for AI agents — all
 while keeping the owner's costs safe. It is honest about its limits, and it has

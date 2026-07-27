@@ -1,11 +1,11 @@
-# TraceFlow Compress — Serverless Prompt-Compression MCP Connector
+# Distil — Serverless Prompt-Compression MCP Connector
 
 A serverless MCP connector that compresses prompts fast and returns
-**TraceFlow-style metrics** (tokens, cost, latency, compute-load, energy, carbon,
+**Distil-style metrics** (tokens, cost, latency, compute-load, energy, carbon,
 plus prompt intelligence). Every number is either **measured** or a
 **clearly-labeled estimate** using a named method — nothing faked.
 
-Implements the buildable slice of the TraceFlow whitepaper: the *Prompt
+Implements the buildable slice of the source whitepaper: the *Prompt
 Intelligence* layer plus token / cost / compute / energy / carbon metrics.
 
 ---
@@ -31,9 +31,9 @@ Intelligence* layer plus token / cost / compute / energy / carbon metrics.
 | `est_gpu_ms_per_call`, `est_gpu_ms_saved`, `compute_reduction_pct` | `2 × params × tokens` ÷ GPU throughput | Estimated |
 | `fillers_removed`, `redundancy_pct` | heuristic analysis | **Real** |
 
-### Compute-Load module (replaces TraceFlow's GPU metrics)
+### Compute-Load module (replaces Distil's GPU metrics)
 
-TraceFlow measured GPU utilization to (1) gauge inference compute load,
+Distil measured GPU utilization to (1) gauge inference compute load,
 (2) measure efficiency, (3) detect saturation, and (4) prove *"compression
 reduces GPU load."* We can't measure OpenAI's GPUs, so we preserve the
 **function**, not fake the measurement:
@@ -59,7 +59,7 @@ reduces GPU load."* We can't measure OpenAI's GPUs, so we preserve the
 | `compress_prompt` | text, target_ratio?, quality?, target_model? | compressed text + full metrics |
 | `analyze_prompt` | text | tokens, fillers, redundancy, est. cost (no compression) |
 | `estimate_savings` | text, calls_per_day?, target_model? | projected monthly cost + carbon saved |
-| `get_metrics` | timeframe? | aggregate TraceFlow dashboard (+ cache stats) |
+| `get_metrics` | timeframe? | aggregate Distil dashboard (+ cache stats) |
 | `get_top_prompts` | n? | most expensive / compressible prompts seen |
 | `route_prompt` | text | recommend small vs large model by complexity |
 

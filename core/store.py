@@ -4,7 +4,7 @@
   * Local JSON file otherwise (dev / stdio use).
 
 Stores a capped list of records (successful compressions + error events) and
-derives TraceFlow-style aggregate metrics: totals, averages, throughput
+derives Distil-style aggregate metrics: totals, averages, throughput
 (tokens/sec), and reliability (error rate).
 """
 
@@ -17,7 +17,7 @@ import time
 from threading import Lock
 
 _CAP = 500
-_LIST_KEY = "tf:records"
+_LIST_KEY = "distil:records"
 
 
 def entry_from_result(result: dict) -> dict:
@@ -137,7 +137,7 @@ class MetricsStore:
             self._backend = _UpstashBackend(url, token)
             self.backend_name = "upstash"
         else:
-            path = os.getenv("TF_METRICS_PATH", ".traceflow_metrics.json")
+            path = os.getenv("DISTIL_METRICS_PATH", ".distil_metrics.json")
             self._backend = _LocalBackend(path)
             self.backend_name = "local-json"
 

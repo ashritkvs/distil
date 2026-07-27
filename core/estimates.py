@@ -49,7 +49,7 @@ ENERGY_WH_PER_1K_TOKENS = 0.4
 CARBON_G_PER_KWH = 400.0
 
 # --------------------------------------------------------------------------- #
-# Compute-load reference (replaces TraceFlow's measured GPU metrics)
+# Compute-load reference (replaces Distil's measured GPU metrics)
 # --------------------------------------------------------------------------- #
 
 # Reference accelerator for translating estimated FLOPs -> estimated GPU time.

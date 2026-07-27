@@ -1,4 +1,4 @@
-"""AIOps: anomaly detection over the compression metric stream (TraceFlow §7).
+"""AIOps: anomaly detection over the compression metric stream (Distil §7).
 
 Statistical (IQR-fence) + rule-based detection on stored records. Flags:
   * low-compression prompts (reduction far below the normal range)

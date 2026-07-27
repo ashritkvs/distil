@@ -1,11 +1,11 @@
-# TraceFlow Compress
+# Distil
 
 A **serverless prompt-compression MCP connector** that compresses prompts fast
-and returns **TraceFlow-style metrics** — tokens, cost, latency, compute-load,
+and returns **Distil-style metrics** — tokens, cost, latency, compute-load,
 energy, and carbon — where every number is either **measured** or a
 **clearly-labeled estimate**. See [SPEC.md](SPEC.md) for the full design.
 
-Built around the TraceFlow whitepaper's *Prompt Intelligence* + token/cost/
+Built around the source whitepaper's *Prompt Intelligence* + token/cost/
 compute/energy/carbon layer (the buildable slice — no GPU hardware required).
 
 ## Highlights
@@ -13,7 +13,7 @@ compute/energy/carbon layer (the buildable slice — no GPU hardware required).
 - **Fast + serverless:** default heuristic compression is pure Python (~3 ms,
   no model, no API key). Optional `gpt-4o-mini` mode for higher quality.
 - **MCP connector:** exposes 5 tools + a metrics resource over streamable HTTP.
-- **TraceFlow metrics:** token/cost/latency (measured) + energy/carbon/GPU-load
+- **Distil metrics:** token/cost/latency (measured) + energy/carbon/GPU-load
   (estimated, labeled). GPU intent preserved via a compute-load model, not faked.
 - **Live dashboard** + public `/metrics` endpoint.
 - **Honest by design:** every estimate flagged `estimated: true`; closed-model
@@ -39,7 +39,7 @@ uvicorn api.index:app --port 8000 # run the HTTP server + dashboard
 | `route_prompt(text)` | Recommend a small/large model by complexity + cost transparency |
 | `analyze_prompt(text)` | Tokens, fillers, redundancy (no compression) |
 | `estimate_savings(text, calls_per_day?, target_model?)` | Projected monthly cost/carbon savings |
-| `get_metrics()` | Aggregate TraceFlow metrics incl. cache hit rate |
+| `get_metrics()` | Aggregate Distil metrics incl. cache hit rate |
 | `get_top_prompts(n?)` | Most compressible prompts seen |
 | `detect_anomalies()` | AIOps: flag low-compression / token / cost spikes (IQR baseline) |
 
@@ -52,7 +52,7 @@ measured sub-step timings (`route`, `cache_lookup`, `compress`, `token_metrics`,
 ### Semantic caching (§8.2) & multi-model routing (§8.4)
 
 - **Cache** — two-tier, serverless-friendly: exact (normalized hash) + similarity
-  (lexical-cosine, `TF_CACHE_THRESHOLD`, default 0.92) so near-identical prompts
+  (lexical-cosine, `DISTIL_CACHE_THRESHOLD`, default 0.92) so near-identical prompts
   reuse a prior compression. Namespaced by (ratio, quality, model). Per warm
   instance. Hit rate is shown on the dashboard.
 - **Routing** — `route_prompt` / `target_model="auto"` scores prompt complexity

@@ -1,4 +1,4 @@
-"""TraceFlow Compress — MCP server (FastMCP).
+"""Distil — MCP server (FastMCP).
 
 Exposes the compression core as MCP tools + a metrics resource. Runs over
 stdio locally (`python mcp_server.py`) and is mounted over streamable HTTP for
@@ -36,18 +36,18 @@ load_dotenv()
 
 # Transport security. Access is gated by the API key (see api/index.py), so
 # DNS-rebinding host checks are off by default to work on any deploy domain.
-# Tighten via env: TF_DNS_REBIND_PROTECTION=true + TF_ALLOWED_HOSTS/ORIGINS.
+# Tighten via env: DISTIL_DNS_REBIND_PROTECTION=true + DISTIL_ALLOWED_HOSTS/ORIGINS.
 _security = TransportSecuritySettings(
     enable_dns_rebinding_protection=(
-        os.getenv("TF_DNS_REBIND_PROTECTION", "false").lower() == "true"
+        os.getenv("DISTIL_DNS_REBIND_PROTECTION", "false").lower() == "true"
     ),
-    allowed_hosts=[h.strip() for h in os.getenv("TF_ALLOWED_HOSTS", "*").split(",")],
-    allowed_origins=[o.strip() for o in os.getenv("TF_ALLOWED_ORIGINS", "*").split(",")],
+    allowed_hosts=[h.strip() for h in os.getenv("DISTIL_ALLOWED_HOSTS", "*").split(",")],
+    allowed_origins=[o.strip() for o in os.getenv("DISTIL_ALLOWED_ORIGINS", "*").split(",")],
 )
 
 # stateless_http=True: each request is self-contained (no persistent session /
 # background task group), which is required to run on serverless (Vercel).
-mcp = FastMCP("traceflow-compress", transport_security=_security,
+mcp = FastMCP("distil", transport_security=_security,
               stateless_http=True, json_response=True)
 
 
@@ -62,7 +62,7 @@ def compress_prompt(
     safe: bool = False,
     min_score: int = 75,
 ) -> dict:
-    """Compress a prompt and return full TraceFlow metrics.
+    """Compress a prompt and return full Distil metrics.
 
     Args:
         text: the prompt to compress.
@@ -165,7 +165,7 @@ def get_violations(n: int = 50) -> list[dict]:
 @mcp.tool()
 def get_budget() -> dict:
     """Token budget status: used, available, utilization, and how much the
-    budget is stretched by compression (configured via TF_TOKEN_BUDGET)."""
+    budget is stretched by compression (configured via DISTIL_TOKEN_BUDGET)."""
     return _get_budget()
 
 
@@ -248,7 +248,7 @@ def estimate_savings(
 
 @mcp.tool()
 def get_metrics() -> dict:
-    """Aggregate TraceFlow metrics across all compressions, incl. cache stats."""
+    """Aggregate Distil metrics across all compressions, incl. cache stats."""
     summary = store.summary()
     summary["cache"] = cache.stats()
     return summary

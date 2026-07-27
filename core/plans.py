@@ -5,7 +5,7 @@ Upstash-backed when configured), and enforces monthly request/token quotas.
 Payment processing (Stripe) is intentionally out of scope — this is the
 metering/entitlement layer a billing integration sits on top of.
 
-Config: map API keys to plans via TF_TENANT_PLANS = "keyA:pro,keyB:free".
+Config: map API keys to plans via DISTIL_TENANT_PLANS = "keyA:pro,keyB:free".
 """
 
 from __future__ import annotations
@@ -23,12 +23,12 @@ PLANS = {
     "enterprise": {"monthly_requests": 2_000_000, "monthly_tokens": 1_000_000_000,
                    "llm_features": True, "rate_per_min": 3000},
 }
-DEFAULT_PLAN = os.getenv("TF_DEFAULT_PLAN", "free")
+DEFAULT_PLAN = os.getenv("DISTIL_DEFAULT_PLAN", "free")
 
 
 def _tenant_plans() -> dict[str, str]:
     out = {}
-    for pair in os.getenv("TF_TENANT_PLANS", "").split(","):
+    for pair in os.getenv("DISTIL_TENANT_PLANS", "").split(","):
         if ":" in pair:
             k, p = pair.split(":", 1)
             out[k.strip()] = p.strip()

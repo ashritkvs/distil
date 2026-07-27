@@ -1,6 +1,6 @@
 # Marketplace submission — requirements & checklist
 
-TraceFlow Compress is a streamable-HTTP MCP connector. This documents what's
+Distil is a streamable-HTTP MCP connector. This documents what's
 needed to list it on the Claude connector directory / Vercel Marketplace.
 
 ## Machine-readable manifest
@@ -8,7 +8,7 @@ Served live at **`/manifest`** (see `core/manifest.py`) — name, description,
 categories, transport, auth, capabilities, and endpoints.
 
 ## Connector basics (done)
-- ✅ Live MCP endpoint: `https://traceflow-compress.vercel.app/mcp`
+- ✅ Live MCP endpoint: `https://distil.vercel.app/mcp`
 - ✅ Streamable-HTTP transport, stateless (serverless-compatible)
 - ✅ 17 tools + `metrics://summary` resource
 - ✅ Public dashboards (`/`, `/engineering`) + JSON APIs (`/metrics`, `/process`)

@@ -1,4 +1,4 @@
-"""Multi-model routing (TraceFlow §8.4).
+"""Multi-model routing (Distil §8.4).
 
 Scores prompt complexity and recommends a model tier: simple/short prompts go
 to a small cheap model, complex/long ones to a larger model. Returns the
@@ -20,9 +20,9 @@ _REASONING = {
     "optimize", "architect", "debug", "refactor", "summarize", "critique",
 }
 
-SMALL_MODEL = os.getenv("TF_SMALL_MODEL", "gpt-4o-mini")
-LARGE_MODEL = os.getenv("TF_LARGE_MODEL", "gpt-4o")
-ROUTE_THRESHOLD = float(os.getenv("TF_ROUTE_THRESHOLD", "50"))
+SMALL_MODEL = os.getenv("DISTIL_SMALL_MODEL", "gpt-4o-mini")
+LARGE_MODEL = os.getenv("DISTIL_LARGE_MODEL", "gpt-4o")
+ROUTE_THRESHOLD = float(os.getenv("DISTIL_ROUTE_THRESHOLD", "50"))
 
 
 def complexity_score(text: str) -> float:

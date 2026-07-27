@@ -1,12 +1,12 @@
-# TraceFlow Compress — Product Documentation
+# Distil — Product Documentation
 
 **An LLM governance + prompt-compression gateway.** It screens, optimizes, and
 measures prompts before they reach an LLM — delivered as an MCP connector (for
 AI agents) and a web tool (for humans).
 
-- **Live app / demo:** https://traceflow-compress.vercel.app
-- **MCP connector:** https://traceflow-compress.vercel.app/mcp
-- **Source:** https://github.com/ashritkvs/traceflow-compress
+- **Live app / demo:** https://distil.vercel.app
+- **MCP connector:** https://distil.vercel.app/mcp
+- **Source:** https://github.com/ashritkvs/distil
 
 ---
 
@@ -18,7 +18,7 @@ Teams sending prompts to LLMs face three costs at once:
    attacks, request unsafe content, or pull disallowed code packages.
 3. **Blindness** — no visibility into what's being spent or sent.
 
-TraceFlow Compress addresses all three in one gateway.
+Distil addresses all three in one gateway.
 
 ## 2. What happens to a prompt
 

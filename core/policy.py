@@ -5,9 +5,9 @@ and evaluates them against a configurable allowlist or denylist. Used by the
 governance orchestrator to block disallowed dependencies.
 
 Config (env):
-  TF_POLICY_MODE      = "denylist" (default) | "allowlist"
-  TF_DENIED_PACKAGES  = comma list (denylist mode)
-  TF_ALLOWED_PACKAGES = comma list (allowlist mode)
+  DISTIL_POLICY_MODE      = "denylist" (default) | "allowlist"
+  DISTIL_DENIED_PACKAGES  = comma list (denylist mode)
+  DISTIL_ALLOWED_PACKAGES = comma list (allowlist mode)
 """
 
 from __future__ import annotations
@@ -43,9 +43,9 @@ def _detect(text: str) -> list[str]:
 
 
 def _config() -> tuple[str, set[str], set[str]]:
-    mode = os.getenv("TF_POLICY_MODE", "denylist").lower()
-    denied = {p.strip().lower() for p in os.getenv("TF_DENIED_PACKAGES", "").split(",") if p.strip()}
-    allowed = {p.strip().lower() for p in os.getenv("TF_ALLOWED_PACKAGES", "").split(",") if p.strip()}
+    mode = os.getenv("DISTIL_POLICY_MODE", "denylist").lower()
+    denied = {p.strip().lower() for p in os.getenv("DISTIL_DENIED_PACKAGES", "").split(",") if p.strip()}
+    allowed = {p.strip().lower() for p in os.getenv("DISTIL_ALLOWED_PACKAGES", "").split(",") if p.strip()}
     if not denied:
         denied = set(_DEFAULT_DENIED)
     return mode, denied, allowed
@@ -63,5 +63,5 @@ def check_packages(text: str) -> dict:
         "policy_mode": mode,
         "detected_packages": detected,
         "violations": violations,
-        "note": "Configure via TF_POLICY_MODE / TF_DENIED_PACKAGES / TF_ALLOWED_PACKAGES.",
+        "note": "Configure via DISTIL_POLICY_MODE / DISTIL_DENIED_PACKAGES / DISTIL_ALLOWED_PACKAGES.",
     }
