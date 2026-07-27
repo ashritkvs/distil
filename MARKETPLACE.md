@@ -8,7 +8,7 @@ Served live at **`/manifest`** (see `core/manifest.py`) — name, description,
 categories, transport, auth, capabilities, and endpoints.
 
 ## Connector basics (done)
-- ✅ Live MCP endpoint: `https://distil.vercel.app/mcp`
+- ✅ Live MCP endpoint: `https://getdistil.vercel.app/mcp`
 - ✅ Streamable-HTTP transport, stateless (serverless-compatible)
 - ✅ 17 tools + `metrics://summary` resource
 - ✅ Public dashboards (`/`, `/engineering`) + JSON APIs (`/metrics`, `/process`)

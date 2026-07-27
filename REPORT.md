@@ -1,8 +1,8 @@
 # Distil — Project Report
 ### An LLM Governance & Token-Optimization Gateway
 
-**Live product:** https://distil.vercel.app
-**MCP connector:** https://distil.vercel.app/mcp
+**Live product:** https://getdistil.vercel.app
+**MCP connector:** https://getdistil.vercel.app/mcp
 **Source code:** https://github.com/ashritkvs/distil
 **Date:** July 2026
 
@@ -213,7 +213,7 @@ infrastructure, not by effort.
 
 ## 7. How to see it working (demo)
 
-- **Easiest:** open **https://distil.vercel.app** and paste a
+- **Easiest:** open **https://getdistil.vercel.app** and paste a
   prompt. Try a wordy question to see it shrink, then try a prompt with a fake
   Social Security number or an "ignore your instructions" line to watch it get
   **blocked**.

@@ -4,8 +4,8 @@
 measures prompts before they reach an LLM — delivered as an MCP connector (for
 AI agents) and a web tool (for humans).
 
-- **Live app / demo:** https://distil.vercel.app
-- **MCP connector:** https://distil.vercel.app/mcp
+- **Live app / demo:** https://getdistil.vercel.app
+- **MCP connector:** https://getdistil.vercel.app/mcp
 - **Source:** https://github.com/ashritkvs/distil
 
 ---
