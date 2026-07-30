@@ -255,3 +255,29 @@ app.add_route("/answer", answer_endpoint, methods=["POST"])
 app.add_route("/engineering", engineering, methods=["GET"])
 app.add_route("/", dashboard, methods=["GET"])
 app.add_middleware(GatewayMiddleware)
+
+
+class _StripVercelPrefix:
+    """Vercel rewrites all requests to '/api/index/<path>' and (in the current
+    platform behavior) delivers that rewritten path to the app. Strip the
+    '/api/index' prefix so the real routes match. Backward-safe: if the path
+    doesn't carry the prefix (old behavior / local uvicorn), it's untouched."""
+
+    def __init__(self, inner, prefix="/api/index"):
+        self.inner = inner
+        self.prefix = prefix
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") in ("http", "websocket"):
+            path = scope.get("path", "")
+            if path == self.prefix or path.startswith(self.prefix + "/"):
+                new = path[len(self.prefix):] or "/"
+                scope = dict(scope)
+                scope["path"] = new
+                scope["raw_path"] = new.encode("utf-8")
+        await self.inner(scope, receive, send)
+
+
+# Outermost wrapper: fixes the path before Starlette routing (passes lifespan
+# and everything else straight through).
+app = _StripVercelPrefix(app)
