@@ -143,6 +143,17 @@ def compress_adaptive(text: str, target_ratio: float = 0.5,
 
 
 @mcp.tool()
+def ask(text: str, target_ratio: float = 0.5, target_model: str = "gpt-4o-mini",
+        adaptive: bool = False) -> dict:
+    """End-to-end: govern + compress the prompt, then send the COMPRESSED prompt
+    to the connected LLM and return its generated answer plus the input tokens
+    the compression saved on that call. Needs OPENAI_API_KEY on the server."""
+    from core.answer import answer
+    return answer(text, target_ratio=target_ratio, target_model=target_model,
+                  adaptive=adaptive)
+
+
+@mcp.tool()
 def govern_prompt(text: str) -> dict:
     """Governance only (no compression): classification, content-security,
     moderation, package-policy, and code-vuln checks with a verdict."""

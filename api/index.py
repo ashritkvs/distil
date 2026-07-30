@@ -23,8 +23,9 @@ _DASHBOARD = os.path.join(_DASH_DIR, "index.html")
 _ENGINEERING = os.path.join(_DASH_DIR, "engineering.html")
 
 
-# Endpoints that consume compute — gated by auth (if configured) + rate limits.
-_PROTECTED_PREFIXES = ("/mcp", "/process", "/compress")
+# Endpoints that consume compute — rate-limited + metered. /answer is open in
+# the tool (uses the server's connected OpenAI) but rate-limited to cap cost.
+_PROTECTED_PREFIXES = ("/mcp", "/process", "/compress", "/answer")
 
 
 def _extract_key(request) -> str:
@@ -141,6 +142,36 @@ async def process_endpoint(request):
     return JSONResponse(d)
 
 
+async def answer_endpoint(request):
+    """End-to-end: govern + compress the prompt, then send the compressed
+    prompt to the connected LLM and return its answer."""
+    try:
+        data = await request.json()
+    except Exception:
+        return JSONResponse({"error": "invalid JSON"}, status_code=400)
+    prompt = (data.get("prompt") or "").strip()
+    if len(prompt) < 3:
+        return JSONResponse({"error": "prompt too short (min 3 chars)"},
+                            status_code=422)
+    if len(prompt) > 6000:
+        return JSONResponse({"error": "prompt too long (max 6000 chars)"},
+                            status_code=422)
+    from core.answer import answer
+    try:
+        d = answer(
+            prompt,
+            target_ratio=float(data.get("target_ratio", 0.5)),
+            target_model=data.get("target_model") or "gpt-4o-mini",
+            adaptive=bool(data.get("adaptive", False)),
+            enforce=bool(data.get("enforce", True)),
+        )
+    except Exception as e:
+        store.record_error(type(e).__name__, prompt)
+        return JSONResponse({"error": str(e)}, status_code=500)
+    _meter(request, {"original_tokens": d.get("input_tokens_if_original", 0)})
+    return JSONResponse(d)
+
+
 def _meter(request, d):
     """Record billable usage for the tenant (identity set by the middleware)."""
     from core.plans import record_usage
@@ -217,6 +248,7 @@ app.add_route("/manifest", manifest_endpoint, methods=["GET"])
 app.add_route("/usage", usage_endpoint, methods=["GET"])
 app.add_route("/compress", compress_endpoint, methods=["POST"])
 app.add_route("/process", process_endpoint, methods=["POST"])
+app.add_route("/answer", answer_endpoint, methods=["POST"])
 app.add_route("/engineering", engineering, methods=["GET"])
 app.add_route("/", dashboard, methods=["GET"])
 app.add_middleware(GatewayMiddleware)

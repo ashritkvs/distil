@@ -87,9 +87,16 @@
       </label>
       <label><input type="checkbox" id="quality" /> High quality (LLM · uses OpenAI)</label>
       <label><input type="checkbox" id="safe" /> Safe mode (verify · never breaks meaning)</label>
+      <label><input type="checkbox" id="answer" /> Get AI answer (send compressed prompt to the LLM)</label>
     </div>
     <button id="run">COMPRESS →</button>
     <div class="err" id="err"></div>
+  </div>
+
+  <!-- ANSWER -->
+  <div class="section" id="answerSection" style="display:none;">
+    <div class="label">AI Answer <span id="answerMeta" style="font-size:11px;color:#444;"></span></div>
+    <div class="panel" style="margin-top:8px;"><div class="panel-body" id="answerBody" style="min-height:60px;"></div></div>
   </div>
 
   <!-- RESULT -->
@@ -185,10 +192,14 @@
   async function run() {
     const prompt = $("prompt").value.trim();
     $("err").textContent = "";
+    $("answerSection").style.display = "none";
     if (prompt.length < 3) { $("err").textContent = "Enter a prompt (min 3 chars)."; return; }
-    const btn = $("run"); btn.disabled = true; btn.textContent = "COMPRESSING…";
+    const wantAnswer = $("answer").checked;
+    const btn = $("run"); btn.disabled = true;
+    btn.textContent = wantAnswer ? "ASKING THE LLM…" : "COMPRESSING…";
     try {
-      const res = await fetch("/process", {
+      const endpoint = wantAnswer ? "/answer" : "/process";
+      const res = await fetch(endpoint, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
@@ -196,17 +207,41 @@
           target_model: $("model").value,
           quality: $("quality").checked,
           safe: $("safe").checked,
+          adaptive: false,
           enforce: true,
         }),
       });
       const d = await res.json();
-      if (!res.ok) { $("err").textContent = d.error || "compression failed"; }
+      if (!res.ok) { $("err").textContent = d.error || "request failed"; }
+      else if (wantAnswer) { showAnswer(d); await loadAgg(); }
       else { showResult(d); await loadAgg(); }
     } catch(e) {
       $("err").textContent = "request failed: " + e.message;
     } finally {
       btn.disabled = false; btn.textContent = "COMPRESS →";
     }
+  }
+
+  function showAnswer(d) {
+    // Still show the compression + governance result on top.
+    showResult({
+      verdict: d.verdict, blocked: d.blocked, reasons: d.reasons,
+      governance: d.governance, original_text: d.original_prompt,
+      compressed_text: d.compressed_prompt,
+      original_tokens: d.input_tokens_if_original,
+      compressed_tokens: d.input_tokens_sent,
+      reduction_pct: d.reduction_pct, mode: "sent-to-llm",
+    });
+    if (d.blocked) { $("answerSection").style.display = "none"; return; }
+    if (!d.answer) {
+      $("err").textContent = d.error || "no answer returned";
+      return;
+    }
+    $("answerSection").style.display = "block";
+    $("answerBody").textContent = d.answer;
+    $("answerMeta").textContent =
+      `· ${d.model} · sent ${d.input_tokens_sent} tokens instead of ` +
+      `${d.input_tokens_if_original} (saved ${d.input_tokens_saved})`;
   }
 
   $("run").addEventListener("click", run);
