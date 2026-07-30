@@ -2,8 +2,9 @@
 tiktoken>=0.8.0
 psutil>=5.9.0
 python-dotenv>=1.0.0
-# MCP server + serverless HTTP
-mcp>=1.2.0
+# MCP server + serverless HTTP.
+# Pinned <2.0.0: mcp 2.x moved/removed mcp.server.fastmcp (breaks FastMCP import).
+mcp>=1.2.0,<2.0.0
 starlette>=0.37.0
 httpx>=0.27.0
 # Optional LLM (quality=true) path
