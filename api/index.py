@@ -157,8 +157,11 @@ async def answer_endpoint(request):
         return JSONResponse({"error": "prompt too long (max 6000 chars)"},
                             status_code=422)
     try:
+        from starlette.concurrency import run_in_threadpool
         from core.answer import answer
-        d = answer(
+        # Run the blocking LLM call off the event loop (required on serverless).
+        d = await run_in_threadpool(
+            answer,
             prompt,
             target_ratio=float(data.get("target_ratio", 0.5)),
             target_model=data.get("target_model") or "gpt-4o-mini",

@@ -63,7 +63,7 @@ def answer(
     # 2) Send the COMPRESSED prompt to the LLM and get the answer.
     from openai import OpenAI
 
-    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), timeout=45.0, max_retries=1)
     resp = client.chat.completions.create(
         model=target_model,
         max_tokens=max_tokens,
