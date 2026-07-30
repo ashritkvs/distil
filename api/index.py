@@ -156,8 +156,8 @@ async def answer_endpoint(request):
     if len(prompt) > 6000:
         return JSONResponse({"error": "prompt too long (max 6000 chars)"},
                             status_code=422)
-    from core.answer import answer
     try:
+        from core.answer import answer
         d = answer(
             prompt,
             target_ratio=float(data.get("target_ratio", 0.5)),
@@ -166,8 +166,11 @@ async def answer_endpoint(request):
             enforce=bool(data.get("enforce", True)),
         )
     except Exception as e:
+        import traceback
         store.record_error(type(e).__name__, prompt)
-        return JSONResponse({"error": str(e)}, status_code=500)
+        return JSONResponse({"error": str(e), "type": type(e).__name__,
+                             "trace": traceback.format_exc()[-800:]},
+                            status_code=500)
     _meter(request, {"original_tokens": d.get("input_tokens_if_original", 0)})
     return JSONResponse(d)
 
