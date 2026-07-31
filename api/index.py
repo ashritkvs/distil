@@ -18,6 +18,12 @@ from core.cache import cache
 from core.store import store
 from mcp_server import mcp
 
+from api.gateway_routes import (
+    anthropic_messages,
+    gemini_generate_content,
+    openai_chat_completions,
+)
+
 _DASH_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dashboard")
 _DASHBOARD = os.path.join(_DASH_DIR, "index.html")
 _ENGINEERING = os.path.join(_DASH_DIR, "engineering.html")
@@ -254,6 +260,15 @@ app.add_route("/process", process_endpoint, methods=["POST"])
 app.add_route("/answer", answer_endpoint, methods=["POST"])
 app.add_route("/engineering", engineering, methods=["GET"])
 app.add_route("/", dashboard, methods=["GET"])
+
+# LLM Gateway (drop-in proxy) — auth is the CUSTOMER's own provider key, not
+# Distil's CONNECTOR_API_KEY, so these stay outside GatewayMiddleware's
+# key-extraction (which would otherwise treat the provider key as a Distil
+# tenant key). Each handler does its own hashed-identity rate limiting.
+app.add_route("/v1/chat/completions", openai_chat_completions, methods=["POST"])
+app.add_route("/v1/messages", anthropic_messages, methods=["POST"])
+app.add_route("/v1beta/models/{model_action}", gemini_generate_content, methods=["POST"])
+
 app.add_middleware(GatewayMiddleware)
 
 
