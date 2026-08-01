@@ -1,0 +1,10 @@
+{
+  "name": "distil-extension-tests",
+  "private": true,
+  "scripts": {
+    "test": "node send_interception.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

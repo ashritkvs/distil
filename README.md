@@ -10,6 +10,9 @@ compute/energy/carbon layer (the buildable slice — no GPU hardware required).
 
 ## Highlights
 
+- **Browser extension:** compresses what you type directly into claude.ai,
+  chatgpt.com, and gemini.google.com — no API key needed, works inside your
+  normal logged-in chat session. See [extension/README.md](extension/README.md).
 - **LLM Gateway:** drop-in proxy for OpenAI/Anthropic/Gemini — point your
   `base_url` at Distil and every request is compressed (optionally governed)
   before it reaches the real provider, streaming included. See below.

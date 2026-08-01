@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import HTMLResponse, JSONResponse
 
 from core import compress as _compress
@@ -270,6 +271,21 @@ app.add_route("/v1/messages", anthropic_messages, methods=["POST"])
 app.add_route("/v1beta/models/{model_action}", gemini_generate_content, methods=["POST"])
 
 app.add_middleware(GatewayMiddleware)
+
+# Public API: allow browser-JS callers (the Distil browser extension's
+# background worker, customer frontends calling the gateway directly).
+# CORS is not an auth boundary — every route here already gates on its own
+# key/rate-limit; this only controls which origins a browser will let JS
+# read the response from.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["x-distil-original-tokens", "x-distil-sent-tokens",
+                    "x-distil-tokens-saved", "x-ratelimit-limit",
+                    "x-ratelimit-remaining", "retry-after"],
+)
 
 
 class _StripVercelPrefix:
