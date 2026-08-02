@@ -139,6 +139,8 @@
     { k:"throughput_tokens_per_sec", l:"Throughput", f:v=>v+"<small> tok/s</small>" },
     { k:"total_carbon_saved_g", l:"CO₂ Saved (est)", f:v=>Number(v).toFixed(3)+"<small> g</small>" },
     { k:"total_gpu_ms_saved",   l:"GPU-ms Saved (est)", f:v=>Number(v).toFixed(1)+"<small> ms</small>" },
+    { k:"extension_requests",   l:"Via Browser Extension", f:v=>v },
+    { k:"extension_tokens_saved", l:"Ext. Tokens Saved", f:v=>v },
   ];
 
   async function loadAgg() {

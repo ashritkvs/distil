@@ -39,8 +39,18 @@ A small toast in the bottom-right corner shows what happened, e.g.
 5. Open claude.ai, chatgpt.com, or gemini.google.com, type a wordy prompt,
    and hit Enter — watch for the toast.
 
-Click the toolbar icon to open the popup: toggle compression on/off, and
-adjust the compression ratio (lower = more aggressive).
+Click the toolbar icon to open the popup: toggle compression on/off, see your
+last compression and running totals, and jump to the live dashboard.
+
+## Metrics
+
+Every compression the extension does is tagged `client: "extension"` and
+`site: "claude.ai"` (etc.) and recorded by the same backend the public demo
+uses — so it shows up on **https://getdistil.vercel.app** itself, broken out
+under "Via Browser Extension" (also available as JSON at `/metrics` →
+`by_client.extension`), not just in the popup. The popup also keeps a local
+running total ("this browser, all time") since the dashboard's numbers are
+global across everyone using Distil, not just you.
 
 ## What's verified vs. not
 
@@ -79,7 +89,9 @@ adjust the compression ratio (lower = more aggressive).
   wording — the model (and you, scrolling back later) will see the
   compressed version.
 - **Heuristic compression only** (free, instant, no LLM call) — it can read
-  slightly terse. Lower/raise the ratio in the popup to taste.
+  slightly terse. How much to compress is decided by Distil, not you — there's
+  no ratio knob to tune; if quality ever needs adjusting, that's a backend
+  default to revisit, not a per-user setting.
 - **Desktop browser only.** Mobile apps (Claude/ChatGPT/Gemini iOS/Android)
   aren't covered — there's no equivalent extension surface there.
 - **Rate limits.** `/compress` is anonymous and free, shared with Distil's
@@ -100,7 +112,7 @@ content/common.js      shared send-interception logic (all 3 sites use this)
 content/claude.js       claude.ai selectors (live-verified)
 content/chatgpt.js      chatgpt.com selectors (NOT live-verified — see above)
 content/gemini.js       gemini.google.com selectors (live-verified)
-popup/                 toolbar popup: on/off toggle, ratio slider, last stats
+popup/                 toolbar popup: on/off toggle, last + all-time stats, dashboard link
 tests/                 jsdom test for the send-interception logic
 ```
 

@@ -35,6 +35,10 @@ def entry_from_result(result: dict) -> dict:
         "est_carbon_saved_g": result.get("est_carbon_saved_g", 0.0),
         "est_gpu_ms_saved": result.get("est_gpu_ms_saved", 0.0),
         "mode": result.get("mode", "heuristic"),
+        # Who sent this compression — "web" (dashboard/API caller, default) or
+        # "extension" (the browser extension), plus which chat site if known.
+        "client": result.get("client") or "web",
+        "site": result.get("site"),
     }
 
 
@@ -79,6 +83,30 @@ def _summarize(records: list[dict]) -> dict:
     base["errors"] = len(errors)
     base["error_rate_pct"] = round(len(errors) / total * 100, 1) if total else 0.0
     base["violations"] = len(violations)
+
+    # Breakdown by client, so "web" (dashboard/API) and "extension" (browser
+    # extension) usage are both visible instead of blending into one total.
+    by_client: dict[str, dict] = {}
+    for r in ok:
+        client = r.get("client") or "web"
+        c = by_client.setdefault(client, {"requests": 0, "tokens_saved": 0,
+                                          "_reduction_sum": 0.0})
+        c["requests"] += 1
+        c["tokens_saved"] += r.get("tokens_saved", 0)
+        c["_reduction_sum"] += r.get("reduction_pct", 0.0)
+    base["by_client"] = {
+        name: {
+            "requests": c["requests"],
+            "tokens_saved": c["tokens_saved"],
+            "avg_reduction_pct": round(c["_reduction_sum"] / c["requests"], 1),
+        }
+        for name, c in by_client.items()
+    }
+    ext = base["by_client"].get("extension", {"requests": 0, "tokens_saved": 0,
+                                              "avg_reduction_pct": 0.0})
+    base["extension_requests"] = ext["requests"]
+    base["extension_tokens_saved"] = ext["tokens_saved"]
+    base["extension_avg_reduction_pct"] = ext["avg_reduction_pct"]
     return base
 
 

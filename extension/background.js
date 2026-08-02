@@ -7,13 +7,30 @@
  * be silently blocked by claude.ai/chatgpt.com/gemini.google.com's own CSP;
  * (2) it's one place to read settings and record the last-compression stats
  * shown in the popup.
+ *
+ * Every call tags `client: "extension"` and `site` on the request, so this
+ * usage shows up broken out (not just blended into the totals) on the live
+ * Distil dashboard at https://getdistil.vercel.app — see the "Via Browser
+ * Extension" tiles there, or GET /metrics -> `by_client.extension`.
  */
 
 const DISTIL_ENDPOINT = "https://getdistil.vercel.app/compress";
-const DEFAULT_SETTINGS = { enabled: true, ratio: 0.5 };
+const DEFAULT_SETTINGS = { enabled: true };
+// How much to compress is Distil's own call, not a user knob (see popup) —
+// this matches the backend's own default target ratio.
+const COMPRESSION_RATIO = 0.5;
 
 async function getSettings() {
   return chrome.storage.sync.get(DEFAULT_SETTINGS);
+}
+
+async function recordLocalTotals(tokensSaved) {
+  const { totals } = await chrome.storage.local.get({
+    totals: { requests: 0, tokensSaved: 0 },
+  });
+  totals.requests += 1;
+  totals.tokensSaved += tokensSaved;
+  await chrome.storage.local.set({ totals });
 }
 
 async function compress(text, site) {
@@ -26,14 +43,16 @@ async function compress(text, site) {
     return { ok: true, skipped: true, reason: "empty", text };
   }
 
-  let ratio = Number(settings.ratio);
-  if (!Number.isFinite(ratio) || ratio < 0.05 || ratio > 1) ratio = 0.5;
-
   try {
     const res = await fetch(DISTIL_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: text, target_ratio: ratio }),
+      body: JSON.stringify({
+        prompt: text,
+        target_ratio: COMPRESSION_RATIO,
+        client: "extension",
+        site,
+      }),
     });
     if (!res.ok) throw new Error(`Distil HTTP ${res.status}`);
     const data = await res.json();
@@ -57,6 +76,7 @@ async function compress(text, site) {
       ts: Date.now(),
     };
     await chrome.storage.local.set({ lastStats: result });
+    await recordLocalTotals(data.tokens_saved || 0);
     return result;
   } catch (err) {
     // Fail-safe: a Distil error must never block the user's message.

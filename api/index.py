@@ -227,6 +227,16 @@ async def compress_endpoint(request):
     except Exception as e:
         store.record_error(type(e).__name__, prompt)
         return JSONResponse({"error": str(e)}, status_code=500)
+    # Optional caller-supplied tags (e.g. the browser extension sends
+    # client="extension", site="claude.ai") so usage is attributable in
+    # /metrics without exposing anything sensitive — no prompt content beyond
+    # the existing 60-char preview is added.
+    client = data.get("client")
+    if isinstance(client, str) and client.strip():
+        d["client"] = client.strip()[:32]
+    site = data.get("site")
+    if isinstance(site, str) and site.strip():
+        d["site"] = site.strip()[:64]
     if not d.get("cache_hit"):
         store.record(d)
     _meter(request, d)

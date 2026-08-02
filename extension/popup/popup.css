@@ -44,11 +44,6 @@ header h1 {
   accent-color: #f47a42;
 }
 
-input[type="range"] {
-  width: 100%;
-  accent-color: #f47a42;
-}
-
 .hint {
   font-size: 11px;
   color: #94a3b8;
@@ -71,6 +66,17 @@ input[type="range"] {
 }
 
 .stats-row { color: #cbd5e1; }
+
+.dashboard-link {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  color: #f47a42;
+  text-decoration: none;
+  padding: 8px 0 10px;
+}
+
+.dashboard-link:hover { text-decoration: underline; }
 
 footer {
   font-size: 10px;
