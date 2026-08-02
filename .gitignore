@@ -23,3 +23,4 @@ venv/
 # Extension test deps
 extension/tests/node_modules/
 extension/tests/package-lock.json
+.env*

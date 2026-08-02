@@ -43,8 +43,10 @@ class RateLimiter:
         self._mem: dict[str, deque] = defaultdict(deque)
         self._lock = Lock()
         self._upstash = None
-        url = os.getenv("UPSTASH_REDIS_REST_URL")
-        token = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+        # Accept either the classic Upstash naming or Vercel Marketplace's
+        # "Upstash for Redis" naming (KV_REST_API_*).
+        url = os.getenv("UPSTASH_REDIS_REST_URL") or os.getenv("KV_REST_API_URL")
+        token = os.getenv("UPSTASH_REDIS_REST_TOKEN") or os.getenv("KV_REST_API_TOKEN")
         if url and token:
             self._upstash = (url.rstrip("/"), token)
 

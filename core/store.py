@@ -1,6 +1,8 @@
 """Aggregate metrics store with two backends.
 
-  * Upstash Redis (serverless) when UPSTASH_REDIS_REST_URL + _TOKEN are set.
+  * Upstash Redis (serverless) when UPSTASH_REDIS_REST_URL + _TOKEN (or
+    Vercel's Marketplace "Upstash for Redis" naming, KV_REST_API_URL +
+    KV_REST_API_TOKEN) are set.
   * Local JSON file otherwise (dev / stdio use).
 
 Stores a capped list of records (successful compressions + error events) and
@@ -157,10 +159,18 @@ class _UpstashBackend:
         return [json.loads(x) for x in res]  # newest-first (LPUSH order)
 
 
+def _upstash_creds() -> tuple[str | None, str | None]:
+    """Read Upstash REST credentials under either env var naming: the
+    classic UPSTASH_REDIS_REST_* (docs, manual setup) or KV_REST_API_* (the
+    name Vercel's own Marketplace "Upstash for Redis" integration uses)."""
+    url = os.getenv("UPSTASH_REDIS_REST_URL") or os.getenv("KV_REST_API_URL")
+    token = os.getenv("UPSTASH_REDIS_REST_TOKEN") or os.getenv("KV_REST_API_TOKEN")
+    return url, token
+
+
 class MetricsStore:
     def __init__(self):
-        url = os.getenv("UPSTASH_REDIS_REST_URL")
-        token = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+        url, token = _upstash_creds()
         if url and token:
             self._backend = _UpstashBackend(url, token)
             self.backend_name = "upstash"
